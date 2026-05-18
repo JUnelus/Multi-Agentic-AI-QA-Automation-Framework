@@ -1,0 +1,26 @@
+{
+  "appName": "SauceDemo",
+  "baseUrl": "https://www.saucedemo.com/",
+  "testCaseOutput": "apps/saucedemo/test-cases/saucedemo_test_cases.xlsx",
+  "generatedSpecsPath": "generated/specs/saucedemo",
+  "generatedPageObjectsPath": "generated/page-objects/saucedemo",
+  "testFocusAreas": [
+    "Login",
+    "Inventory",
+    "Cart",
+    "Checkout",
+    "Error validation",
+    "Accessibility"
+  ],
+  "credentials": {
+    "standardUser": {
+      "username": "standard_user",
+      "password": "secret_sauce"
+    },
+    "lockedOutUser": {
+      "username": "locked_out_user",
+      "password": "secret_sauce"
+    }
+  }
+}
+

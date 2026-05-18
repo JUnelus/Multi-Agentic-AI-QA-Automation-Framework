@@ -1,0 +1,20 @@
+{
+  "appName": "UI Testing Playground",
+  "baseUrl": "http://www.uitestingplayground.com/",
+  "testCaseOutput": "apps/uitestingplayground/test-cases/uitestingplayground_test_cases.xlsx",
+  "generatedSpecsPath": "generated/specs/uitestingplayground",
+  "generatedPageObjectsPath": "generated/page-objects/uitestingplayground",
+  "testFocusAreas": [
+    "Dynamic ID",
+    "Class attribute",
+    "Hidden layers",
+    "Load delay",
+    "AJAX data",
+    "Client-side delay",
+    "Click behavior",
+    "Text input",
+    "Scrollbars",
+    "Alerts"
+  ]
+}
+

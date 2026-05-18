@@ -1,0 +1,37 @@
+{
+  "name": "multi-agentic-ai-qa-automation-framework",
+  "version": "1.0.0",
+  "description": "A scalable multi-agent AI QA automation framework that converts application URLs into structured manual test cases and Playwright TypeScript automation.",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:report": "playwright show-report",
+    "agent:generate-testcases": "ts-node agents/agent1-testcase-creator.ts",
+    "agent:generate-scripts": "ts-node agents/agent2-script-generator.ts",
+    "agent:run": "npm run agent:generate-testcases && npm run agent:generate-scripts",
+    "test:saucedemo": "playwright test apps/saucedemo/tests",
+    "typecheck": "tsc --noEmit"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JUnelus/Multi-Agentic-AI-QA-Automation-Framework.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/JUnelus/Multi-Agentic-AI-QA-Automation-Framework/issues"
+  },
+  "homepage": "https://github.com/JUnelus/Multi-Agentic-AI-QA-Automation-Framework#readme",
+  "dependencies": {
+    "@playwright/test": "^1.60.0",
+    "dotenv": "^17.4.2",
+    "exceljs": "^4.4.0",
+    "openai": "^6.38.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^6.0.3"
+  }
+}
