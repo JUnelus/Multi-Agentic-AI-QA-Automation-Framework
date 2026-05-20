@@ -1,68 +1,69 @@
 import { expect, Locator, Page } from '@playwright/test';
+import type { ProductDetails } from './InventoryPage';
 
 export class CartPage {
   readonly page: Page;
   readonly title: Locator;
-  readonly cartList: Locator;
   readonly cartItems: Locator;
-  readonly checkoutButton: Locator;
   readonly continueShoppingButton: Locator;
+  readonly checkoutButton: Locator;
   readonly cartBadge: Locator;
 
   constructor(page: Page) {
     this.page = page;
-    this.title = page.locator('[data-test=title]');
-    this.cartList = page.locator('[data-test=cart-list]');
-    this.cartItems = page.locator('[data-test=inventory-item]');
-    this.checkoutButton = page.locator('[data-test=checkout]');
-    this.continueShoppingButton = page.locator('[data-test=continue-shopping]');
-    this.cartBadge = page.locator('[data-test=shopping-cart-badge]');
+    this.title = page.locator('[data-test="title"]');
+    this.cartItems = page.locator('[data-test="inventory-item"]');
+    this.continueShoppingButton = page.locator('[data-test="continue-shopping"]');
+    this.checkoutButton = page.locator('[data-test="checkout"]');
+    this.cartBadge = page.locator('[data-test="shopping-cart-badge"]');
+  }
+
+  itemByName(name: string): Locator {
+    return this.cartItems.filter({ hasText: name });
   }
 
   async expectLoaded(): Promise<void> {
-    await expect(this.page).toHaveURL(/cart\.html/);
+    await expect(this.page).toHaveURL(/cart.html/);
     await expect(this.title).toHaveText('Your Cart');
-    await expect(this.cartList).toBeVisible();
+    await expect(this.checkoutButton).toBeVisible();
+    await expect(this.continueShoppingButton).toBeVisible();
   }
 
-  cartItem(productName: string): Locator {
-    return this.cartItems.filter({ has: this.page.locator('[data-test=inventory-item-name]', { hasText: productName }) });
+  async expectEmpty(): Promise<void> {
+    await expect(this.cartItems).toHaveCount(0);
+    await expect(this.cartBadge).toBeHidden();
   }
 
-  async expectItem(productName: string): Promise<void> {
-    const item = this.cartItem(productName);
-    await expect(item).toBeVisible();
-    await expect(item.locator('[data-test=inventory-item-name]')).toHaveText(productName);
-    await expect(item.locator('[data-test=inventory-item-desc]')).toBeVisible();
-    await expect(item.locator('[data-test=inventory-item-price]')).toBeVisible();
-    await expect(item.locator('[data-test=item-quantity]')).toHaveText('1');
+  async expectProductVisible(name: string): Promise<void> {
+    await expect(this.itemByName(name)).toBeVisible();
   }
 
-  async removeProduct(productName: string): Promise<void> {
-    await this.cartItem(productName).getByRole('button', { name: 'Remove' }).click();
+  async getCartItemDetails(name: string): Promise<ProductDetails> {
+    const item = this.itemByName(name);
+    return {
+      name: (await item.locator('[data-test="inventory-item-name"]').innerText()).trim(),
+      description: (await item.locator('[data-test="inventory-item-desc"]').innerText()).trim(),
+      price: Number((await item.locator('[data-test="inventory-item-price"]').innerText()).replace('$', '').trim())
+    };
   }
 
-  async expectItemRemoved(productName: string): Promise<void> {
-    await expect(this.cartItem(productName)).toHaveCount(0);
+  async removeProduct(name: string): Promise<void> {
+    await this.itemByName(name).getByRole('button', { name: 'Remove' }).click();
   }
 
-  async checkout(): Promise<void> {
-    await this.checkoutButton.click();
+  async expectCartBadgeCount(count: number): Promise<void> {
+    if (count === 0) {
+      await expect(this.cartBadge).toBeHidden();
+      return;
+    }
+    await expect(this.cartBadge).toHaveText(String(count));
   }
 
   async continueShopping(): Promise<void> {
     await this.continueShoppingButton.click();
   }
 
-  async expectAllItemQuantitiesAreOne(): Promise<void> {
-    const quantities = this.cartItems.locator('[data-test=item-quantity]');
-    const count = await quantities.count();
-    for (let index = 0; index < count; index++) {
-      await expect(quantities.nth(index)).toHaveText('1');
-    }
-  }
-
-  async expectCartBadgeHidden(): Promise<void> {
-    await expect(this.cartBadge).toHaveCount(0);
+  async checkout(): Promise<void> {
+    await this.checkoutButton.click();
   }
 }

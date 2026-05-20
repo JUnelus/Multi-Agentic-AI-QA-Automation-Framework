@@ -2,6 +2,8 @@
 
 A scalable multi-agent AI QA automation framework that converts application URLs into structured manual test cases and Playwright TypeScript automation.
 
+![img.png](img.png)
+
 ## Current Target Applications
 
 - SauceDemo

@@ -3,61 +3,52 @@ import { expect, Locator, Page } from '@playwright/test';
 export class CheckoutOverviewPage {
   readonly page: Page;
   readonly title: Locator;
-  readonly cartItems: Locator;
-  readonly itemTotal: Locator;
-  readonly tax: Locator;
-  readonly total: Locator;
+  readonly overviewItems: Locator;
+  readonly subtotalLabel: Locator;
+  readonly taxLabel: Locator;
+  readonly totalLabel: Locator;
   readonly finishButton: Locator;
   readonly cancelButton: Locator;
+  readonly cartBadge: Locator;
 
   constructor(page: Page) {
     this.page = page;
-    this.title = page.locator('[data-test=title]');
-    this.cartItems = page.locator('[data-test=inventory-item]');
-    this.itemTotal = page.locator('[data-test=subtotal-label]');
-    this.tax = page.locator('[data-test=tax-label]');
-    this.total = page.locator('[data-test=total-label]');
-    this.finishButton = page.locator('[data-test=finish]');
-    this.cancelButton = page.locator('[data-test=cancel]');
+    this.title = page.locator('[data-test="title"]');
+    this.overviewItems = page.locator('[data-test="inventory-item"]');
+    this.subtotalLabel = page.locator('[data-test="subtotal-label"]');
+    this.taxLabel = page.locator('[data-test="tax-label"]');
+    this.totalLabel = page.locator('[data-test="total-label"]');
+    this.finishButton = page.locator('[data-test="finish"]');
+    this.cancelButton = page.locator('[data-test="cancel"]');
+    this.cartBadge = page.locator('[data-test="shopping-cart-badge"]');
   }
 
   async expectLoaded(): Promise<void> {
-    await expect(this.page).toHaveURL(/checkout-step-two\.html/);
+    await expect(this.page).toHaveURL(/checkout-step-two.html/);
     await expect(this.title).toHaveText('Checkout: Overview');
-  }
-
-  item(productName: string): Locator {
-    return this.cartItems.filter({ has: this.page.locator('[data-test=inventory-item-name]', { hasText: productName }) });
-  }
-
-  async expectItem(productName: string): Promise<void> {
-    const item = this.item(productName);
-    await expect(item).toBeVisible();
-    await expect(item.locator('[data-test=inventory-item-name]')).toHaveText(productName);
-    await expect(item.locator('[data-test=inventory-item-desc]')).toBeVisible();
-    await expect(item.locator('[data-test=inventory-item-price]')).toBeVisible();
-    await expect(item.locator('[data-test=item-quantity]')).toHaveText('1');
+    await expect(this.finishButton).toBeVisible();
+    await expect(this.cancelButton).toBeVisible();
   }
 
   async getItemPrices(): Promise<number[]> {
-    const prices = await this.cartItems.locator('[data-test=inventory-item-price]').allTextContents();
-    return prices.map(price => Number(price.replace('$', '')));
+    const prices = await this.page.locator('[data-test="inventory-item-price"]').allTextContents();
+    return prices.map((price) => Number(price.replace('$', '').trim()));
   }
 
-  private async getAmount(locator: Locator): Promise<number> {
+  private async getMoneyValue(locator: Locator): Promise<number> {
     const text = await locator.innerText();
-    const amount = text.match(/[0-9]+\.[0-9]{2}/)?.[0];
-    return Number(amount);
+    return Number(text.replace(/[^0-9.]/g, ''));
   }
 
-  async expectTotalsCalculatedCorrectly(): Promise<void> {
+  async expectTotalsAreCorrect(): Promise<void> {
     const prices = await this.getItemPrices();
-    const expectedItemTotal = Number(prices.reduce((sum, price) => sum + price, 0).toFixed(2));
-    const actualItemTotal = await this.getAmount(this.itemTotal);
-    const actualTax = await this.getAmount(this.tax);
-    const actualTotal = await this.getAmount(this.total);
-    expect(actualItemTotal).toBe(expectedItemTotal);
-    expect(actualTotal).toBe(Number((actualItemTotal + actualTax).toFixed(2)));
+    expect(prices.length).toBeGreaterThan(0);
+    const expectedSubtotal = prices.reduce((sum, price) => sum + price, 0);
+    const subtotal = await this.getMoneyValue(this.subtotalLabel);
+    const tax = await this.getMoneyValue(this.taxLabel);
+    const total = await this.getMoneyValue(this.totalLabel);
+    expect(subtotal).toBeCloseTo(expectedSubtotal, 2);
+    expect(total).toBeCloseTo(subtotal + tax, 2);
   }
 
   async finish(): Promise<void> {
@@ -66,5 +57,13 @@ export class CheckoutOverviewPage {
 
   async cancel(): Promise<void> {
     await this.cancelButton.click();
+  }
+
+  async expectCartBadgeCount(count: number): Promise<void> {
+    if (count === 0) {
+      await expect(this.cartBadge).toBeHidden();
+      return;
+    }
+    await expect(this.cartBadge).toHaveText(String(count));
   }
 }

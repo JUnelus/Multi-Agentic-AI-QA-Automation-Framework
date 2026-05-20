@@ -1,95 +1,101 @@
 import { expect, Locator, Page } from '@playwright/test';
 
-export type ProductSortOption = 'az' | 'za' | 'lohi' | 'hilo';
+export type ProductDetails = {
+  name: string;
+  description: string;
+  price: number;
+};
 
 export class InventoryPage {
   readonly page: Page;
   readonly title: Locator;
-  readonly inventoryList: Locator;
   readonly inventoryItems: Locator;
+  readonly sortDropdown: Locator;
   readonly cartLink: Locator;
   readonly cartBadge: Locator;
-  readonly sortDropdown: Locator;
   readonly menuButton: Locator;
-  readonly closeMenuButton: Locator;
+  readonly menuCloseButton: Locator;
   readonly logoutLink: Locator;
 
   constructor(page: Page) {
     this.page = page;
-    this.title = page.locator('[data-test=title]');
-    this.inventoryList = page.locator('[data-test=inventory-list]');
-    this.inventoryItems = page.locator('[data-test=inventory-item]');
-    this.cartLink = page.locator('[data-test=shopping-cart-link]');
-    this.cartBadge = page.locator('[data-test=shopping-cart-badge]');
-    this.sortDropdown = page.locator('[data-test=product-sort-container]');
-    this.menuButton = page.locator('[data-test=open-menu]');
-    this.closeMenuButton = page.locator('[data-test=close-menu]');
-    this.logoutLink = page.locator('[data-test=logout-sidebar-link]');
+    this.title = page.locator('[data-test="title"]');
+    this.inventoryItems = page.locator('[data-test="inventory-item"]');
+    this.sortDropdown = page.locator('[data-test="product-sort-container"]');
+    this.cartLink = page.locator('[data-test="shopping-cart-link"]');
+    this.cartBadge = page.locator('[data-test="shopping-cart-badge"]');
+    this.menuButton = page.locator('#react-burger-menu-btn');
+    this.menuCloseButton = page.locator('#react-burger-cross-btn');
+    this.logoutLink = page.locator('[data-test="logout-sidebar-link"]');
+  }
+
+  productByName(name: string): Locator {
+    return this.inventoryItems.filter({ hasText: name });
   }
 
   async expectLoaded(): Promise<void> {
-    await expect(this.page).toHaveURL(/inventory\.html/);
+    await expect(this.page).toHaveURL(/inventory.html/);
     await expect(this.title).toHaveText('Products');
-    await expect(this.inventoryList).toBeVisible();
     await expect(this.inventoryItems).toHaveCount(6);
+    await expect(this.cartLink).toBeVisible();
+    await expect(this.menuButton).toBeVisible();
+    await expect(this.sortDropdown).toBeVisible();
   }
 
-  productItem(productName: string): Locator {
-    return this.inventoryItems.filter({ has: this.page.locator('[data-test=inventory-item-name]', { hasText: productName }) });
+  async getProductNames(): Promise<string[]> {
+    return (await this.page.locator('[data-test="inventory-item-name"]').allTextContents()).map((name) => name.trim());
   }
 
-  async expectProductListDetails(): Promise<void> {
-    await this.expectLoaded();
-    const count = await this.inventoryItems.count();
-    for (let index = 0; index < count; index++) {
-      const item = this.inventoryItems.nth(index);
-      await expect(item.locator('[data-test=inventory-item-name]')).toBeVisible();
-      await expect(item.locator('[data-test=inventory-item-img]')).toBeVisible();
-      await expect(item.locator('[data-test=inventory-item-desc]')).toBeVisible();
-      await expect(item.locator('[data-test=inventory-item-price]')).toBeVisible();
-      await expect(item.getByRole('button', { name: /Add to cart|Remove/ })).toBeVisible();
+  async getProductPrices(): Promise<number[]> {
+    const prices = await this.page.locator('[data-test="inventory-item-price"]').allTextContents();
+    return prices.map((price) => Number(price.replace('$', '').trim()));
+  }
+
+  async getProductDetails(name: string): Promise<ProductDetails> {
+    const item = this.productByName(name);
+    return {
+      name: (await item.locator('[data-test="inventory-item-name"]').innerText()).trim(),
+      description: (await item.locator('[data-test="inventory-item-desc"]').innerText()).trim(),
+      price: Number((await item.locator('[data-test="inventory-item-price"]').innerText()).replace('$', '').trim())
+    };
+  }
+
+  async selectSort(option: 'az' | 'za' | 'lohi' | 'hilo'): Promise<void> {
+    await this.sortDropdown.selectOption(option);
+  }
+
+  async addProduct(name: string): Promise<void> {
+    await this.productByName(name).getByRole('button', { name: 'Add to cart' }).click();
+  }
+
+  async addProducts(names: string[]): Promise<void> {
+    for (const name of names) {
+      await this.addProduct(name);
     }
   }
 
-  async addProduct(productName: string): Promise<void> {
-    await this.productItem(productName).getByRole('button', { name: 'Add to cart' }).click();
+  async removeProduct(name: string): Promise<void> {
+    await this.productByName(name).getByRole('button', { name: 'Remove' }).click();
   }
 
-  async removeProduct(productName: string): Promise<void> {
-    await this.productItem(productName).getByRole('button', { name: 'Remove' }).click();
+  async expectProductButton(name: string, buttonName: 'Add to cart' | 'Remove'): Promise<void> {
+    await expect(this.productByName(name).getByRole('button', { name: buttonName })).toBeVisible();
   }
 
-  async expectProductButton(productName: string, buttonName: 'Add to cart' | 'Remove'): Promise<void> {
-    await expect(this.productItem(productName).getByRole('button', { name: buttonName })).toBeVisible();
-  }
-
-  async expectCartBadge(quantity: number): Promise<void> {
-    await expect(this.cartBadge).toHaveText(String(quantity));
-  }
-
-  async expectCartBadgeHidden(): Promise<void> {
-    await expect(this.cartBadge).toHaveCount(0);
+  async expectCartBadgeCount(count: number): Promise<void> {
+    if (count === 0) {
+      await expect(this.cartBadge).toBeHidden();
+      return;
+    }
+    await expect(this.cartBadge).toHaveText(String(count));
   }
 
   async openCart(): Promise<void> {
     await this.cartLink.click();
   }
 
-  async openProduct(productName: string): Promise<void> {
-    await this.productItem(productName).locator('[data-test=inventory-item-name]').click();
-  }
-
-  async sortBy(option: ProductSortOption): Promise<void> {
-    await this.sortDropdown.selectOption(option);
-  }
-
-  async getProductNames(): Promise<string[]> {
-    return this.inventoryItems.locator('[data-test=inventory-item-name]').allTextContents();
-  }
-
-  async getProductPrices(): Promise<number[]> {
-    const prices = await this.inventoryItems.locator('[data-test=inventory-item-price]').allTextContents();
-    return prices.map(price => Number(price.replace('$', '')));
+  async openProductDetails(name: string): Promise<void> {
+    await this.productByName(name).locator('[data-test="inventory-item-name"]').click();
   }
 
   async openMenu(): Promise<void> {
@@ -98,7 +104,7 @@ export class InventoryPage {
   }
 
   async closeMenu(): Promise<void> {
-    await this.closeMenuButton.click();
+    await this.menuCloseButton.click();
     await expect(this.logoutLink).toBeHidden();
   }
 
@@ -107,11 +113,24 @@ export class InventoryPage {
     await this.logoutLink.click();
   }
 
-  async expectProductImagesHaveAltText(): Promise<void> {
+  async expectAllExpectedProductsDisplayed(expectedNames: string[]): Promise<void> {
+    await expect(this.inventoryItems).toHaveCount(expectedNames.length);
+    for (const name of expectedNames) {
+      const item = this.productByName(name);
+      await expect(item.locator('[data-test="inventory-item-name"]')).toHaveText(name);
+      await expect(item.locator('[data-test="inventory-item-desc"]')).toBeVisible();
+      await expect(item.locator('[data-test="inventory-item-price"]')).toContainText('$');
+      await expect(item.getByRole('button', { name: 'Add to cart' })).toBeVisible();
+      await expect(item.locator('img')).toHaveAttribute('alt', /.+/);
+    }
+  }
+
+  async expectAllProductImagesHaveAccessibleAlternatives(): Promise<void> {
     const images = this.inventoryItems.locator('img');
     const count = await images.count();
+    expect(count).toBeGreaterThan(0);
     for (let index = 0; index < count; index++) {
-      await expect(images.nth(index)).toHaveAttribute('alt', /\S+/);
+      await expect(images.nth(index)).toHaveAttribute('alt', /.+/);
     }
   }
 }
