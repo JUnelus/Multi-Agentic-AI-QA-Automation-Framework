@@ -6,9 +6,9 @@
     "test": "playwright test",
     "test:headed": "playwright test --headed",
     "test:report": "playwright show-report",
-    "agent:generate-testcases": "ts-node agents/agent1-testcase-creator.ts",
-    "agent:generate-scripts": "ts-node agents/agent2-script-generator.ts",
-    "agent:run": "npm run agent:generate-testcases && npm run agent:generate-scripts",
+    "agent:generate-testcases": "tsx agents/agent1-testcase-creator.ts",
+    "agent:generate-scripts": "tsx agents/agent2-script-generator.ts",
+    "agent:run": "tsx agents/orchestrator.ts",
     "test:saucedemo": "playwright test --project=saucedemo",
     "typecheck": "tsc --noEmit",
     "test:framework": "tsx --test tests/framework/*.spec.ts",
@@ -18,7 +18,11 @@
     "validate:generated": "npm run typecheck:generated && npm run test:generated:list",
     "test:uitestingplayground": "playwright test --project=uitestingplayground --pass-with-no-tests",
     "test:generated:fixture": "playwright test -c playwright.generated.config.ts --project=generated-fixture",
-    "agent:explore": "tsx agents/agent0-application-explorer.ts"
+    "agent:explore": "tsx agents/agent0-application-explorer.ts",
+    "agent:validate-repair": "tsx agents/agent3-validation-repair.ts",
+    "pipeline:saucedemo": "tsx agents/orchestrator.ts --app saucedemo",
+    "pipeline:uitestingplayground": "tsx agents/orchestrator.ts --app uitestingplayground",
+    "pipeline:saucedemo:no-ai": "tsx agents/orchestrator.ts --app saucedemo --no-ai"
   },
   "repository": {
     "type": "git",

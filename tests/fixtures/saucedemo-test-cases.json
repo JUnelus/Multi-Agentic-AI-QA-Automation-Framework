@@ -1,0 +1,33 @@
+[
+  {
+    "schemaVersion": "1.0",
+    "testCaseId": "TC_LOGIN_001",
+    "feature": "Login",
+    "scenario": "Standard user reaches inventory",
+    "testType": "positive",
+    "priority": "high",
+    "preconditions": [
+      "Public SauceDemo demo credentials are available"
+    ],
+    "steps": [
+      {
+        "stepNumber": 1,
+        "action": "Open login page"
+      },
+      {
+        "stepNumber": 2,
+        "action": "Enter standard_user and secret_sauce and submit"
+      }
+    ],
+    "expectedResult": "URL ends in /inventory.html, inventory is visible, and title is Products",
+    "automationFeasible": true,
+    "evidenceIds": [],
+    "selectorEvidence": [],
+    "requirementSource": "Committed reviewed SauceDemo acceptance fixture",
+    "expectedBehaviorSource": "approved-baseline",
+    "confidence": 1,
+    "reviewStatus": "approved",
+    "pageObject": "LoginPage"
+  }
+]
+

@@ -152,3 +152,9 @@ blob-report/
 *.iml
 out/
 
+
+# Generated run evidence and promoted runtime output
+generated/runs/
+generated/staging/
+generated/approved/
+generated/contract-test-*/
