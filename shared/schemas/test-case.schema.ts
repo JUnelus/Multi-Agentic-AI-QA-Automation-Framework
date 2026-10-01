@@ -1,3 +1,4 @@
+import { caseIdPattern } from '../validation/test-identity';
 import { z } from 'zod';
 const text = z.string().trim().min(1);
 export const selectorEvidenceSchema = z.strictObject({
@@ -6,7 +7,15 @@ export const selectorEvidenceSchema = z.strictObject({
 });
 export const testCaseSchema = z.strictObject({
   schemaVersion: z.literal('1.0'),
-  testCaseId: text,
+  application: z
+    .string()
+    .regex(/^[a-z][a-z0-9-]*$/)
+    .optional(),
+  explorationHash: z
+    .string()
+    .regex(/^[a-f0-9]{64}$/)
+    .optional(),
+  testCaseId: z.string().regex(caseIdPattern),
   feature: text,
   scenario: text,
   testType: z.enum(['positive', 'negative', 'edge', 'accessibility']),

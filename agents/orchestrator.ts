@@ -1,3 +1,9 @@
+import {
+  importExploration,
+  validateExploration,
+  validateProvenance
+} from '../shared/exploration/evidence';
+import { Exploration } from '../shared/schemas/explorer.schema';
 import fs from 'node:fs';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
@@ -21,7 +27,6 @@ import { readCode } from '../shared/validation/code-contract';
 import { validateCode } from '../shared/validation/validator';
 import { repairLoop } from '../shared/validation/repair';
 import { Model, OPENAI_MODEL } from '../shared/utils/openai-client';
-import { explorationSchema } from '../shared/schemas/explorer.schema';
 import { promote } from '../shared/validation/promotion';
 export interface PipelineOptions {
   app: string;
@@ -82,17 +87,25 @@ export async function pipeline(options: PipelineOptions) {
       );
     manifest.demoApproval = !!options.demoApproveDrafts || !!options.noAi;
     let cases;
-    if (!options.validateOnly) {
-      const evidence = options.explorationFile
-        ? explorationSchema.parse(
-            JSON.parse(fs.readFileSync(options.explorationFile, 'utf8'))
+    let evidence: Exploration | undefined;
+    const requirements = options.requirementsFile
+      ? fs.readFileSync(options.requirementsFile, 'utf8')
+      : undefined;
+    if (requirements) {
+      manifest.inputHashes.requirements = hashInput(requirements);
+      fs.writeFileSync(path.join(directory, 'requirements.txt'), requirements);
+      manifest.artifacts.requirements = 'requirements.txt';
+    }
+    if (!options.validateOnly || options.explorationFile) {
+      evidence = options.explorationFile
+        ? importExploration(
+            options.explorationFile,
+            directory,
+            options.app,
+            config
           )
         : await explore(options.app, config, directory);
-      if (
-        evidence.app !== options.app ||
-        new URL(evidence.url).origin !== new URL(config.baseUrl).origin
-      )
-        throw new Error('Exploration belongs to another application');
+      validateExploration(evidence, options.app, config);
       fs.writeFileSync(
         path.join(directory, 'exploration.json'),
         JSON.stringify(evidence, null, 2)
@@ -103,13 +116,10 @@ export async function pipeline(options: PipelineOptions) {
         saveRun(directory, manifest);
         return run;
       }
+    }
+    if (!options.validateOnly) {
       if (options.casesFile) cases = readTestCases(options.casesFile);
       else {
-        const requirements = options.requirementsFile
-          ? fs.readFileSync(options.requirementsFile, 'utf8')
-          : undefined;
-        if (requirements)
-          manifest.inputHashes.requirements = hashInput(requirements);
         const baseline = options.noAi
           ? readTestCases('tests/fixtures/' + options.app + '-test-cases.json')
           : undefined;
@@ -126,7 +136,7 @@ export async function pipeline(options: PipelineOptions) {
           : undefined;
         const created = await createTestCases(
           config,
-          evidence,
+          evidence!,
           fixtureModel,
           requirements
         );
@@ -135,6 +145,11 @@ export async function pipeline(options: PipelineOptions) {
         cases = baseline || created.cases;
       }
     } else cases = readTestCases(options.casesFile!);
+    validateProvenance(cases, evidence, {
+      app: options.app,
+      config,
+      requirements
+    });
     await exportTestCases(cases, directory);
     manifest.inputHashes.testCases = hashInput(cases);
     manifest.artifacts.testCases = 'test-cases.json';
@@ -269,7 +284,13 @@ if (require.main === module) {
   pipeline(parseOptions(process.argv.slice(2)))
     .then((run) => {
       console.log('Result: ' + run.manifest.validation.finalResult);
-      if (run.manifest.validation.finalResult === 'failed')
+      const partial = process.argv.some((arg) =>
+        ['--explore-only', '--generate-cases-only'].includes(arg)
+      );
+      if (
+        run.manifest.validation.finalResult !== 'passed' &&
+        !(partial && run.manifest.validation.finalResult === 'pending')
+      )
         process.exitCode = 1;
     })
     .catch((error) => {

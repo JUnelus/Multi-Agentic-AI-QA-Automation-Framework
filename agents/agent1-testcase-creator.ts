@@ -1,3 +1,8 @@
+import {
+  validateProvenance,
+  evidenceHash,
+  validateExploration
+} from '../shared/exploration/evidence';
 import fs from 'node:fs';
 import path from 'node:path';
 import { AppConfig, loadAppConfig } from '../shared/utils/app-config';
@@ -16,7 +21,7 @@ export async function createTestCases(
   model: Model = generateWithOpenAI,
   requirements?: string
 ) {
-  explorationSchema.parse(exploration);
+  validateExploration(exploration, exploration.app, config);
   const template = fs.readFileSync(
     'agents/prompts/testcase-creator.prompt.md',
     'utf8'
@@ -38,35 +43,16 @@ export async function createTestCases(
   );
   const cases = parseJsonResponse(response.text, testCasesSchema).map((c) => ({
     ...c,
-    reviewStatus: 'draft' as const
+    reviewStatus: 'draft' as const,
+    application: exploration.app,
+    explorationHash: evidenceHash(exploration)
   }));
-  const evidence = new Map(
-    exploration.pages.flatMap((p) =>
-      p.elements.map((e) => [e.evidenceId, e] as const)
-    )
-  );
-  for (const c of cases) {
-    if (
-      !c.evidenceIds ||
-      !c.requirementSource ||
-      c.confidence === undefined ||
-      !c.expectedBehaviorSource
-    )
-      throw new Error('Missing behavior provenance');
-    if (
-      c.expectedBehaviorSource === 'approved-baseline' ||
-      (c.expectedBehaviorSource === 'requirement' && !requirements)
-    )
-      throw new Error('Unsupported behavior provenance');
-    if (c.expectedBehaviorSource === 'observed' && !c.evidenceIds.length)
-      throw new Error('Observed behavior requires evidence');
-    for (const id of c.evidenceIds)
-      if (!evidence.has(id) && !exploration.pages.some((p) => p.id === id))
-        throw new Error('Unknown evidence ID');
-    for (const item of c.selectorEvidence || [])
-      if (evidence.get(item.evidenceId)?.selector !== item.selector)
-        throw new Error('Selector lacks observed evidence');
-  }
+  validateProvenance(cases, exploration, {
+    app: exploration.app,
+    config,
+    requirements,
+    generated: true
+  });
   return { cases, usage: response.usage };
 }
 if (require.main === module) {
@@ -78,7 +64,11 @@ if (require.main === module) {
   } else
     createTestCases(
       loadAppConfig(app),
-      explorationSchema.parse(JSON.parse(fs.readFileSync(input, 'utf8')))
+      validateExploration(
+        explorationSchema.parse(JSON.parse(fs.readFileSync(input, 'utf8'))),
+        app,
+        loadAppConfig(app)
+      )
     )
       .then((result) => exportTestCases(result.cases, path.dirname(input)))
       .catch(() => {
