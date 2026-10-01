@@ -15,6 +15,15 @@
     "Text input",
     "Scrollbars",
     "Alerts"
-  ]
+  ],
+  "exploration": {
+    "maxPages": 3,
+    "maxInteractions": 2,
+    "maxDurationMs": 30000,
+    "routes": [
+      "/dynamicid",
+      "/textinput"
+    ],
+    "allowedOrigins": []
+  }
 }
-

@@ -21,6 +21,12 @@
       "username": "locked_out_user",
       "password": "secret_sauce"
     }
+  },
+  "exploration": {
+    "maxPages": 1,
+    "maxInteractions": 0,
+    "maxDurationMs": 30000,
+    "routes": [],
+    "allowedOrigins": []
   }
 }
-

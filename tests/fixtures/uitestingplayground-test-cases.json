@@ -1,0 +1,31 @@
+[
+  {
+    "schemaVersion": "1.0",
+    "testCaseId": "TC_TEXT_001",
+    "feature": "Text Input",
+    "scenario": "Change button name using input",
+    "testType": "positive",
+    "priority": "medium",
+    "preconditions": [],
+    "steps": [
+      {
+        "stepNumber": 1,
+        "action": "Open /textinput"
+      },
+      {
+        "stepNumber": 2,
+        "action": "Enter QA verified in the button name field and click the updating button"
+      }
+    ],
+    "expectedResult": "Button text becomes QA verified",
+    "automationFeasible": true,
+    "evidenceIds": [],
+    "selectorEvidence": [],
+    "requirementSource": "Committed UI Testing Playground text input baseline",
+    "expectedBehaviorSource": "approved-baseline",
+    "confidence": 1,
+    "reviewStatus": "approved",
+    "pageObject": "TextInputPage"
+  }
+]
+
