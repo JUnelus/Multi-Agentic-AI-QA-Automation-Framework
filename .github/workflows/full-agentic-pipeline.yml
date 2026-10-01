@@ -56,6 +56,12 @@ jobs:
               echo "Input must be an existing regular file inside the checkout: $input" >&2
               exit 1
             fi
+            # Every path component must be real: a symlinked parent directory
+            # changes the canonical path but not the lexical one.
+            if [[ "$(realpath -e -- "$input")" != "$(realpath -s -m -- "$input")" ]]; then
+              echo "Input path must not traverse a symlink: $input" >&2
+              exit 1
+            fi
           done
       - name: Fixture pipeline
         if: inputs.mode == 'no-ai'
