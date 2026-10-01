@@ -32,7 +32,12 @@ test('fixture generation cannot certify modified expected results', async () => 
     const file = path.join(directory, 'cases.json');
     fs.writeFileSync(file, JSON.stringify(cases));
     await assert.rejects(
-      () => pipeline({ app: 'saucedemo', noAi: true, casesFile: file }),
+      () =>
+        pipeline({
+          app: 'saucedemo',
+          noAi: true,
+          casesFile: path.relative(process.cwd(), file)
+        }),
       /committed baseline/
     );
   } finally {

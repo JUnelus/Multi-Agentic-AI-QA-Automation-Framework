@@ -48,6 +48,18 @@ export function resolveRepositoryInput(
 ): string {
   if (typeof input !== 'string' || !input.trim())
     throw new Error('Input path cannot be empty');
+  // Reject absolute, drive and UNC forms and any ".." component before
+  // normalization; a traversal that happens to land inside the checkout is
+  // still outside the documented repository-relative contract.
+  if (path.isAbsolute(input) || /^([A-Za-z]:|[\\/]{2})/.test(input))
+    throw new Error(
+      'Input must be a repository-relative path inside the checkout: ' + input
+    );
+  if (input.split(/[\\/]+/).some((segment) => segment === '..'))
+    throw new Error(
+      'Input must be a repository-relative path without ".." components: ' +
+        input
+    );
   const base = path.resolve(root);
   const target = path.resolve(base, input);
   if (target === base || !target.startsWith(base + path.sep))

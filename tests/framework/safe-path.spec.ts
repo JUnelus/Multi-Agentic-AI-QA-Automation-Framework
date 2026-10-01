@@ -76,14 +76,23 @@ test('operator inputs resolve only to regular files or directories inside the ch
       '.',
       '../secret.txt',
       'inputs/../../secret.txt',
+      'inputs/../inputs/cases.json',
+      'inputs\\..\\inputs\\cases.json',
       path.join(outside, 'secret.txt'),
-      '/proc/self/environ'
+      '/proc/self/environ',
+      'C:\\checkout\\inputs\\cases.json',
+      '\\\\server\\share\\cases.json',
+      '//server/share/cases.json'
     ])
       assert.throws(
         () => resolveRepositoryInput(input, 'file', root),
-        /inside the checkout|cannot be empty/,
+        /repository-relative|cannot be empty/,
         input
       );
+    assert.equal(
+      resolveRepositoryInput('./inputs/cases.json', 'file', root),
+      path.join(root, 'inputs', 'cases.json')
+    );
     assert.throws(
       () => resolveRepositoryInput('inputs', 'file', root),
       /regular file/
