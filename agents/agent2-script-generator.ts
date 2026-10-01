@@ -8,7 +8,8 @@ import { TestCase } from '../shared/schemas/test-case.schema';
 export async function generateScripts(config: AppConfig, cases: TestCase[], model: Model = generateWithOpenAI, allowDrafts = false) {
   const selected = selectTestCases(cases, allowDrafts);
   const template = fs.readFileSync('agents/prompts/script-generator.prompt.md', 'utf8');
-  const response = await model(template + '\nInput:\n' + JSON.stringify({ app: { appName: config.appName, baseUrl: config.baseUrl }, testCases: selected }));
+  const dependencies = Object.keys(JSON.parse(fs.readFileSync('package.json', 'utf8')).dependencies);
+  const response = await model(template + '\nInput:\n' + JSON.stringify({ app: { appName: config.appName, baseUrl: config.baseUrl }, dependencies, demoDrafts: allowDrafts, testCases: selected }));
   return { code: parseJsonResponse(response.text, generatedCodeSchema), usage: response.usage };
 }
 if (require.main === module) {
@@ -18,4 +19,3 @@ if (require.main === module) {
     .then(result => { fs.writeFileSync(input + '.automation.json', JSON.stringify(result.code, null, 2)); })
     .catch(() => { console.error('Agent 2 failed. Check approved JSON cases and response schema.'); process.exitCode = 1; });
 }
-
