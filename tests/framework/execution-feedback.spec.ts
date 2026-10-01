@@ -110,3 +110,37 @@ test('syntactically present but unexecuted assertions cannot certify a case', as
     fs.rmSync(directory, { recursive: true, force: true });
   }
 });
+
+test('suite hooks recovered through object enumeration fail discovery with a generator error', async () => {
+  const directory = fs.mkdtempSync(
+    path.join(process.cwd(), 'generated', 'contract-test-')
+  );
+  try {
+    const code = readCode('tests/fixtures/generated/saucedemo');
+    code.specFiles[0].code = `import {test,expect} from 'multi-agentic-ai-qa-automation-framework/generated-test';
+  const setup = Object.entries(test).filter(([k]) => k === 'before' + 'All')[0][1];
+  setup(async () => { await new Promise(() => {}); });
+  test('[TC_LOGIN_001] enumeration bypass',async({page})=>{await page.goto('/');await expect(page).toHaveURL(/./);});`;
+    const staging = path.join(directory, 'staging');
+    stageCode(code, staging);
+    const report = await validateCode(
+      'enumerated-hook',
+      'saucedemo',
+      staging,
+      path.join(directory, 'reports'),
+      readTestCases('tests/fixtures/saucedemo-test-cases.json')
+    );
+    assert.equal(report.schema.status, 'passed');
+    assert.equal(report.typecheck.status, 'passed');
+    assert.equal(report.discovery.status, 'failed');
+    assert.match(
+      report.discovery.diagnostics,
+      /cannot register test\.beforeAll/
+    );
+    assert.equal(report.execution.status, 'not-run');
+    assert.equal(report.finalResult, 'failed');
+    assert.equal(report.category, 'GENERATOR_ERROR');
+  } finally {
+    fs.rmSync(directory, { recursive: true, force: true });
+  }
+});

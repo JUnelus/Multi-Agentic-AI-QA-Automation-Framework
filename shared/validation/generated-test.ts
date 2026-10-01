@@ -59,3 +59,20 @@ export const test = base.extend<{ _originGuard: void }>({
     { auto: true }
   ]
 });
+// Suite hooks receive Playwright timeout slots outside the per-case budget and
+// cannot use the single guarded page. The guarded test object therefore refuses
+// them at runtime however the property is reached (enumeration, aliasing,
+// computed or concatenated keys), independently of the static audit.
+for (const hook of ['beforeAll', 'afterAll'] as const)
+  Object.defineProperty(test, hook, {
+    value: () => {
+      throw new Error(
+        'Generated tests cannot register test.' +
+          hook +
+          '; use the test body or beforeEach/afterEach'
+      );
+    },
+    writable: false,
+    configurable: false,
+    enumerable: true
+  });

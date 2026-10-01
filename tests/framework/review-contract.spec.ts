@@ -7,6 +7,7 @@ import { readTestCases } from '../../shared/utils/testcases';
 import { loadAppConfig } from '../../shared/utils/app-config';
 import { inspectPlaywrightReport } from '../../shared/validation/playwright-report';
 import { executionBudget } from '../../shared/validation/execution-budget';
+import { test as guardedTest } from '../../shared/validation/generated-test';
 const original = readTestCases('tests/fixtures/saucedemo-test-cases.json')[0];
 const cases = ['CASE-1', 'CASE-1-NEG'].map((testCaseId) => ({
   ...original,
@@ -204,6 +205,28 @@ test('suite hooks are rejected in every syntactic form so per-case budgets stay 
     ),
     []
   );
+});
+
+test('guarded test object refuses suite hooks reached by any route at runtime', () => {
+  assert.throws(
+    () => guardedTest.beforeAll(async () => {}),
+    /cannot register test\.beforeAll/
+  );
+  assert.throws(
+    () => guardedTest.afterAll(async () => {}),
+    /cannot register test\.afterAll/
+  );
+  const recovered = Object.entries(guardedTest).filter(
+    ([key]) => key === 'before' + 'All'
+  )[0][1];
+  assert.throws(() => recovered(async () => {}), /cannot register/);
+  for (const hook of ['beforeAll', 'afterAll']) {
+    const descriptor = Object.getOwnPropertyDescriptor(guardedTest, hook);
+    assert.equal(descriptor?.writable, false);
+    assert.equal(descriptor?.configurable, false);
+  }
+  assert.equal(typeof guardedTest.beforeEach, 'function');
+  assert.equal(typeof guardedTest.describe, 'function');
 });
 
 test('indirect browser factories, aliases, computed capabilities and timeout overrides are rejected', () => {
