@@ -1,4 +1,9 @@
-import type { APIRequestContext, BrowserContext, Page } from '@playwright/test';
+import type {
+  APIRequestContext,
+  BrowserContext,
+  Browser,
+  Page
+} from '@playwright/test';
 export function assertAllowedUrl(
   value: string,
   baseURL: string,
@@ -147,4 +152,32 @@ export async function guardBrowser(
     context.off('page', closePopup);
     await session.detach();
   };
+}
+
+// Also deny bound/computed factory calls at runtime during generated test execution.
+export function guardBrowserFactories(
+  browser: Browser,
+  violations: string[]
+): () => void {
+  const methods = ['newContext', 'newPage', 'newBrowserCDPSession'] as const;
+  const descriptors = methods.map((name) =>
+    Object.getOwnPropertyDescriptor(browser, name)
+  );
+  methods.forEach((name) =>
+    Object.defineProperty(browser, name, {
+      configurable: true,
+      value: async () => {
+        const message =
+          'Generated execution blocks browser capability: ' + name;
+        violations.push(message);
+        throw new Error(message);
+      }
+    })
+  );
+  return () =>
+    methods.forEach((name, index) => {
+      const descriptor = descriptors[index];
+      if (descriptor) Object.defineProperty(browser, name, descriptor);
+      else Reflect.deleteProperty(browser, name);
+    });
 }

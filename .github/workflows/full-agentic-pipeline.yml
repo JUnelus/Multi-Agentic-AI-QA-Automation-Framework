@@ -27,7 +27,8 @@ permissions:
 jobs:
   pipeline:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # Four bounded validations plus model retries, setup and artifact upload.
+    timeout-minutes: 120
     env:
       QA_APP_INPUT: ${{ inputs.app }}
       QA_MODE_INPUT: ${{ inputs.mode }}

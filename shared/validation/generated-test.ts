@@ -1,10 +1,14 @@
 import { test as base, expect } from '@playwright/test';
-import { guardApiRequest, guardBrowser } from './origin-policy';
+import {
+  guardApiRequest,
+  guardBrowser,
+  guardBrowserFactories
+} from './origin-policy';
 import { loadAppConfig } from '../utils/app-config';
 export { expect };
 export const test = base.extend<{ _originGuard: void }>({
   _originGuard: [
-    async ({ page, context, request, baseURL }, use, testInfo) => {
+    async ({ page, context, request, baseURL, browser }, use, testInfo) => {
       if (!baseURL)
         throw new Error(
           'Generated tests require a configured application baseURL'
@@ -39,11 +43,16 @@ export const test = base.extend<{ _originGuard: void }>({
         config.exploration.allowedOrigins,
         violations
       );
+      const restoreFactories = guardBrowserFactories(browser, violations);
       try {
         await use();
       } finally {
-        await context.close();
-        await cleanup().catch(() => {});
+        try {
+          await context.close();
+        } finally {
+          await cleanup().catch(() => {});
+          restoreFactories();
+        }
         if (violations.length) throw new Error(violations.join('\n'));
       }
     },

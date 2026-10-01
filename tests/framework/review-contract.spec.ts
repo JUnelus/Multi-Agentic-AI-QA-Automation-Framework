@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { auditCode, readCode } from '../../shared/validation/code-contract';
@@ -161,4 +162,37 @@ test('execution budget scales with case count and rejects unbounded workloads', 
   for (const count of [0, -1, 1.5, 201, 30, Infinity])
     assert.throws(() => executionBudget(count));
   assert.throws(() => executionBudget(1, 500));
+});
+
+test('indirect browser factories, aliases, computed capabilities and timeout overrides are rejected', () => {
+  for (const body of [
+    'const create=browser.newContext.bind(browser);await create();',
+    'await browser["newContext"]();',
+    'const {newContext:create}=other;await create();',
+    'const key="newContext";await other[key]();',
+    'const create=other.newContext;await create();',
+    'test.slow();',
+    'Reflect.get(other,"newContext")();',
+    'Object.getPrototypeOf(other).newContext.call(other);'
+  ])
+    assert.ok(
+      auditCode(code(declaration('CASE-1', body + assertion)), [cases[0]])
+        .length > 0,
+      body
+    );
+});
+
+test('manual workflow reserves time for bounded repairs, model retries and setup', () => {
+  const workflow = fs.readFileSync(
+    '.github/workflows/full-agentic-pipeline.yml',
+    'utf8'
+  );
+  const minutes = Number(/timeout-minutes:\s*(\d+)/.exec(workflow)?.[1]);
+  const maximumValidation = executionBudget(29).processTimeoutMs;
+  const fourAttempts = maximumValidation * 4;
+  const twoModelsWithRetries = 2 * 3 * 120000;
+  const setupAndUpload = 20 * 60000;
+  assert.ok(
+    minutes * 60000 >= fourAttempts + twoModelsWithRetries + setupAndUpload
+  );
 });

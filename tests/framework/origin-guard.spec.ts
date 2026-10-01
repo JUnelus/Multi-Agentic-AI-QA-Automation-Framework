@@ -4,7 +4,8 @@ import http from 'node:http';
 import { chromium, request } from '@playwright/test';
 import {
   guardApiRequest,
-  guardBrowser
+  guardBrowser,
+  guardBrowserFactories
 } from '../../shared/validation/origin-policy';
 test('browser and API guard block external requests and redirects before dispatch', async () => {
   let foreignVisits = 0;
@@ -102,5 +103,25 @@ test('browser and API guard block external requests and redirects before dispatc
       new Promise<void>((r) => server.close(() => r())),
       new Promise<void>((r) => foreign.close(() => r()))
     ]);
+  }
+});
+
+test('runtime browser factory guard blocks bound and computed calls', async () => {
+  const browser = await chromium.launch();
+  const violations: string[] = [];
+  const restore = guardBrowserFactories(browser, violations);
+  try {
+    const create = browser.newContext.bind(browser);
+    await assert.rejects(() => create(), /blocks browser capability/);
+    await assert.rejects(
+      () => browser['newPage'](),
+      /blocks browser capability/
+    );
+    assert.equal(violations.length, 2);
+  } finally {
+    restore();
+    const context = await browser.newContext();
+    await context.close();
+    await browser.close();
   }
 });

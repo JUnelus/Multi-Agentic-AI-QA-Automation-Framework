@@ -43,7 +43,65 @@ export function auditCode(
       ts.ScriptTarget.Latest,
       true
     );
+    const forbiddenMembers = new Set([
+      'browser',
+      'browserType',
+      'constructor',
+      'getPrototypeOf',
+      'getOwnPropertyDescriptor',
+      'getOwnPropertyDescriptors',
+      'defineProperty',
+      'defineProperties',
+      'setPrototypeOf',
+      'newContext',
+      'newPage',
+      'newCDPSession',
+      'newBrowserCDPSession',
+      'launch',
+      'connect',
+      'connectOverCDP',
+      'route',
+      'unroute',
+      'unrouteAll',
+      'routeWebSocket',
+      'extend',
+      'configure',
+      'use',
+      'slow',
+      'setTimeout'
+    ]);
     function visit(node: ts.Node) {
+      if (
+        ts.isPropertyAccessExpression(node) &&
+        forbiddenMembers.has(node.name.text)
+      )
+        errors.push('Unsupported capability access: ' + node.name.text);
+      if (
+        ts.isBindingElement(node) &&
+        node.propertyName &&
+        forbiddenMembers.has(
+          node.propertyName.getText(source).replace(/['"]/g, '')
+        )
+      )
+        errors.push('Unsupported destructured capability');
+      if (ts.isElementAccessExpression(node)) {
+        const key = node.argumentExpression;
+        if (
+          !ts.isNumericLiteral(key) &&
+          !(ts.isStringLiteralLike(key) && !forbiddenMembers.has(key.text))
+        )
+          errors.push(
+            'Computed capability access requires a literal safe property or numeric index'
+          );
+      }
+      if (
+        ts.isComputedPropertyName(node) &&
+        !(
+          ts.isStringLiteralLike(node.expression) &&
+          !forbiddenMembers.has(node.expression.text)
+        )
+      )
+        errors.push('Unsupported computed capability binding');
       if (
         ts.isImportDeclaration(node) &&
         ts.isStringLiteral(node.moduleSpecifier)
@@ -97,7 +155,10 @@ export function auditCode(
           'XMLHttpRequest',
           'WebSocket',
           'Worker',
-          'navigator'
+          'navigator',
+          'browser',
+          'Reflect',
+          '__proto__'
         ].includes(node.text)
       )
         errors.push('Unsupported runtime capability: ' + node.text);
