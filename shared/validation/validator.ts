@@ -44,6 +44,7 @@ export function runPlaywright(app: string, directory: string, reports: string, l
 }
 export async function validateCode(runId: string, app: string, directory: string, reports: string, cases: TestCase[] = []): Promise<ValidationReport> {
   const report = emptyReport(runId);
+  const before = artifactHash(directory);
   for (const stage of ['schema', 'typecheck', 'discovery', 'execution'] as const) {
     const start = Date.now();
     try {
@@ -60,7 +61,11 @@ export async function validateCode(runId: string, app: string, directory: string
       return validationReportSchema.parse(report);
     }
   }
-  report.finalResult = 'passed'; report.artifactHash = artifactHash(directory);
+  if (artifactHash(directory) !== before) {
+    report.finalResult = 'failed'; report.category = 'GENERATOR_ERROR';
+    report.execution = { status: 'failed', diagnostics: 'Artifacts changed during validation', durationMs: 0 };
+    return validationReportSchema.parse(report);
+  }
+  report.finalResult = 'passed'; report.artifactHash = before;
   return validationReportSchema.parse(report);
 }
-

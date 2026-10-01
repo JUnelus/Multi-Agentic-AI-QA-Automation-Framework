@@ -13,6 +13,7 @@ import { validateCode } from '../shared/validation/validator';
 import { repairLoop } from '../shared/validation/repair';
 import { Model, OPENAI_MODEL } from '../shared/utils/openai-client';
 import { explorationSchema } from '../shared/schemas/explorer.schema';
+import { promote } from '../shared/validation/promotion';
 export interface PipelineOptions {
   app: string; noAi?: boolean; exploreOnly?: boolean; generateCasesOnly?: boolean;
   generateCodeOnly?: boolean; validateOnly?: boolean; casesFile?: string; codeDirectory?: string;
@@ -75,6 +76,9 @@ export async function pipeline(options: PipelineOptions) {
     manifest.validation = result.report;
     manifest.artifacts.validatedCode = path.relative(directory, result.directory);
     manifest.artifacts.reports = 'reports';
+    if (result.report.finalResult === 'passed' && selected.every(c => c.reviewStatus === 'approved')) {
+      manifest.artifacts.approved = promote(result.directory, directory, manifest);
+    }
     saveRun(directory, manifest);
     return run;
   } catch (error) {
@@ -103,4 +107,3 @@ if (require.main === module) {
     if (run.manifest.validation.finalResult === 'failed') process.exitCode = 1;
   }).catch(error => { console.error(error.message); process.exitCode = 1; });
 }
-
