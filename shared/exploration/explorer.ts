@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { chromium } from '@playwright/test';
@@ -99,7 +100,10 @@ export async function explore(
           .filter((e) => e.visible && e.role === 'heading')
           .map((e) => e.accessibleName),
         elements,
-        screenshot
+        screenshot,
+        screenshotSha256: createHash('sha256')
+          .update(fs.readFileSync(path.join(runDirectory, screenshot)))
+          .digest('hex')
       });
     }
   } catch (error) {

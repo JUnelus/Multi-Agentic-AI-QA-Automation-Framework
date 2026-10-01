@@ -1,3 +1,7 @@
+import {
+  contentHash,
+  validateProvenance
+} from '../../shared/exploration/evidence';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createTestCases } from '../../agents/agent1-testcase-creator';
@@ -17,6 +21,7 @@ const evidence = explorationSchema.parse({
       title: 'Login',
       headings: [],
       screenshot: 'screenshots/PAGE-001.png',
+      screenshotSha256: 'a'.repeat(64),
       elements: [
         {
           evidenceId: 'OBS-1',
@@ -81,4 +86,36 @@ test('Agent 2 blocks draft input before making any model call', async () => {
     /No approved/
   );
   assert.equal(called, false);
+});
+
+test('Agent 1 stamps requirements and evidence fingerprints for approval resumption', async () => {
+  const requirements = 'Approved login behavior';
+  const result = await createTestCases(
+    config,
+    evidence,
+    async () => ({
+      text: JSON.stringify([
+        { ...baseline, expectedBehaviorSource: 'requirement' }
+      ])
+    }),
+    requirements
+  );
+  assert.equal(result.cases[0].requirementsHash, contentHash(requirements));
+  assert.ok(result.cases[0].explorationHash);
+  assert.doesNotThrow(() =>
+    validateProvenance(
+      [{ ...result.cases[0], reviewStatus: 'approved' }],
+      evidence,
+      { app: 'saucedemo', config, requirements }
+    )
+  );
+  assert.throws(
+    () =>
+      validateProvenance(result.cases, evidence, {
+        app: 'saucedemo',
+        config,
+        requirements: 'Changed behavior'
+      }),
+    /requirements fingerprint mismatch/
+  );
 });

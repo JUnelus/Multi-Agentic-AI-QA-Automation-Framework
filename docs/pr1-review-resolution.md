@@ -20,28 +20,42 @@ Review fixes were implemented and tested on Windows on 2026-09-30 (America/New_Y
 
 Additional review fixed missing Excel provenance columns in mixed case collections, classified missing assertions as generator failures, enabled original evidence/requirements inputs in the manual workflow, and synchronized legacy product-detail assertions with rendered DOM. No expected result was weakened.
 
+## Follow-up Codex findings
+
+The completed re-review of d259e1c produced seven further findings, now fixed:
+
+- Reject indirect/aliased/computed browser-context creation statically and through a runtime factory guard. Tests exercise bound aliases, bracket access and restoration after guard teardown.
+- Include screenshot SHA-256 digests in exploration identity and verify actual image bytes on import and standalone agent reads. Tampered image bytes fail import.
+- Reserve 120 minutes in the manual workflow for bounded repair attempts, model retries, setup and artifact upload. A budget regression verifies the configured headroom.
+- Correct the primary README approval command to reuse the original exploration and requirements.
+- Require an exploration fingerprint whenever a supplied case claims observations or selector evidence; missing fingerprints cannot bypass validation.
+- Preserve infrastructure error categories in pre-validation reports. A real missing-file pipeline regression verifies a persisted ENVIRONMENT_ERROR.
+- Stamp requirement content fingerprints in Agent 1 and reject missing or substituted requirements when resuming reviewed cases.
+
 ## Commands and results
 
-| Command                                         | Result                                                             |
-| ----------------------------------------------- | ------------------------------------------------------------------ |
-| npm run typecheck                               | Passed                                                             |
-| npm run test:framework                          | 45 passed                                                          |
-| npm run test:saucedemo                          | 5 passed                                                           |
-| npm run typecheck:generated                     | Passed                                                             |
-| npm run test:generated:list                     | 106 discovered                                                     |
-| npm run test:generated -- --reporter=line       | 101 passed, 5 failed in experimental legacy accessibility cases    |
-| npm run test:generated -- --grep 'TC_INV_005    | TC_INV_006' --repeat-each=5 --reporter=line                        | 10 passed after rendering synchronization fix |
-| npm run pipeline:saucedemo:no-ai                | Passed; promoted a new immutable version and replaced current.json |
-| npm run pipeline:uitestingplayground -- --no-ai | Passed; promoted                                                   |
-| npm run format:check                            | Passed                                                             |
-| git diff --check                                | Passed                                                             |
+| Command                                                                                   | Result                                                             |
+| ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| npm run typecheck                                                                         | Passed                                                             |
+| npm run test:framework                                                                    | 51 passed                                                          |
+| npm run test:saucedemo                                                                    | 5 passed                                                           |
+| npm run typecheck:generated                                                               | Passed                                                             |
+| npm run test:generated:list                                                               | 106 discovered                                                     |
+| npm run test:generated -- --reporter=line                                                 | 101 passed, 5 failed in experimental legacy accessibility cases    |
+| npm run test:generated -- --grep 'TC_INV_005\|TC_INV_006' --repeat-each=5 --reporter=line | 10 passed after rendering synchronization fix                      |
+| npm run pipeline:saucedemo:no-ai                                                          | Passed; promoted a new immutable version and replaced current.json |
+| npm run pipeline:uitestingplayground -- --no-ai                                           | Passed; promoted                                                   |
+| npm run format:check                                                                      | Passed                                                             |
+| git diff --check                                                                          | Passed                                                             |
+
+GitHub deterministic CI and GitGuardian checks also passed on d259e1c. A manual no-AI workflow dispatch was attempted, but GitHub returned 404 because the new workflow is not yet registered on the default branch. Its actual artifact upload remains unverified until the workflow is available there; no merge was performed to bypass this restriction.
 
 The generated SauceDemo acceptance login passed in the full suite and in the certified pipeline. The framework tests use fixtures, mocked model output and local HTTP servers. Demo-site browser tests depend on external availability.
 
 Latest local successful run evidence:
 
-- generated/runs/saucedemo-2026-10-01T02-52-19-802Z-4c7413cb
-- generated/runs/uitestingplayground-2026-10-01T02-52-26-225Z-0222a8ba
+- generated/runs/saucedemo-2026-10-01T03-13-04-589Z-d9122b7c
+- generated/runs/uitestingplayground-2026-10-01T03-13-12-620Z-dd911d65
 
 ## Preserved failures and merge recommendation
 
@@ -67,8 +81,11 @@ The runtime guard supports bounded Chromium single-page execution and HTTP(S) al
 - agents/prompts/script-generator.prompt.md
 - apps/saucedemo/config.json
 - apps/uitestingplayground/config.json
+- docs/adding-a-new-application.md
 - docs/data-contracts.md
 - docs/generated-code-quality-gates.md
+- docs/pr1-review-resolution.md
+- docs/validation-results.md
 - generated/page-objects/saucedemo/ProductDetailsPage.ts
 - package.json
 - playwright.generated.config.ts

@@ -4,7 +4,7 @@ export function classifyFailure(
   diagnostic: string
 ): FailureCategory {
   if (
-    /browser.*(not found|doesn't exist)|ECONNREFUSED|ERR_NAME_NOT_RESOLVED|ERR_CONNECTION|ENOTFOUND|global timeout/i.test(
+    /browser.*(not found|doesn't exist)|ECONNREFUSED|ERR_NAME_NOT_RESOLVED|ERR_CONNECTION|ENOTFOUND|ENOENT|EACCES|EPERM|ENOSPC|EROFS|global timeout/i.test(
       diagnostic
     )
   )

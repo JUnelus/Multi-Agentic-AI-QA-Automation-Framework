@@ -15,6 +15,10 @@ export const testCaseSchema = z.strictObject({
     .string()
     .regex(/^[a-f0-9]{64}$/)
     .optional(),
+  requirementsHash: z
+    .string()
+    .regex(/^[a-f0-9]{64}$/)
+    .optional(),
   testCaseId: z.string().regex(caseIdPattern),
   feature: text,
   scenario: text,

@@ -83,8 +83,10 @@ npm run pipeline:saucedemo -- --generate-cases-only
 The command prints the run directory. Review its JSON, then generate and validate:
 
 ```bash
-npm run pipeline:saucedemo -- --cases generated/runs/REPLACE_WITH_RUN_ID/test-cases.json
+npm run pipeline:saucedemo -- --cases generated/runs/REPLACE_WITH_RUN_ID/test-cases.json --exploration generated/runs/REPLACE_WITH_RUN_ID/exploration.json
 ```
+
+Keep the original sibling screenshots directory. If case generation used `--requirements FILE`, supply the same file with `--requirements FILE` when resuming; its contents are fingerprinted too.
 
 For a complete repeatable demo using committed model-output fixtures:
 

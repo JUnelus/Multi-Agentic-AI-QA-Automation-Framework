@@ -1,5 +1,8 @@
 import { readTestCases, selectTestCases } from '../shared/utils/testcases';
-import { validateProvenance } from '../shared/exploration/evidence';
+import {
+  validateProvenance,
+  readExploration
+} from '../shared/exploration/evidence';
 import { loadAppConfig } from '../shared/utils/app-config';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -19,7 +22,7 @@ export async function validateAndRepair(
   validateProvenance(
     cases,
     fs.existsSync(evidenceFile)
-      ? JSON.parse(fs.readFileSync(evidenceFile, 'utf8'))
+      ? readExploration(evidenceFile, app, loadAppConfig(app))
       : undefined,
     {
       app,

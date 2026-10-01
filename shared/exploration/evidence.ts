@@ -6,8 +6,11 @@ import { Exploration, explorationSchema } from '../schemas/explorer.schema';
 import { TestCase, testCasesSchema } from '../schemas/test-case.schema';
 import { allowedNavigation } from './route-observer';
 import { assertNoSymlinks } from '../utils/safe-path';
+export const contentHash = (value: string | Buffer): string =>
+  createHash('sha256').update(value).digest('hex');
 export function evidenceHash(evidence: Exploration): string {
-  // Evidence may be copied to another directory. File location is not identity.
+  evidence = explorationSchema.parse(evidence);
+  // Paths may move; screenshot content digests remain part of evidence identity.
   const pages = evidence.pages.map(
     ({ screenshot: _location, ...page }) => page
   );
@@ -41,12 +44,11 @@ export function validateExploration(
   visit(parsed);
   return parsed;
 }
-export function importExploration(
+function readEvidenceBundle(
   sourceFile: string,
-  directory: string,
   app: string,
   config: AppConfig
-): Exploration {
+) {
   assertNoSymlinks(sourceFile);
   const sourceRoot = path.dirname(path.resolve(sourceFile));
   const evidence = validateExploration(
@@ -72,8 +74,26 @@ export function importExploration(
         .equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))
     )
       throw new Error('Screenshot is not a PNG: ' + page.screenshot);
+    if (contentHash(bytes) !== page.screenshotSha256)
+      throw new Error('Screenshot digest mismatch: ' + page.screenshot);
     return { bytes, reference: 'screenshots/import-' + (index + 1) + '.png' };
   });
+  return { evidence, copies };
+}
+export function readExploration(
+  sourceFile: string,
+  app: string,
+  config: AppConfig
+): Exploration {
+  return readEvidenceBundle(sourceFile, app, config).evidence;
+}
+export function importExploration(
+  sourceFile: string,
+  directory: string,
+  app: string,
+  config: AppConfig
+): Exploration {
+  const { evidence, copies } = readEvidenceBundle(sourceFile, app, config);
   const screenshots = path.resolve(directory, 'screenshots');
   assertNoSymlinks(screenshots);
   fs.mkdirSync(screenshots, { recursive: true });
@@ -116,6 +136,26 @@ export function validateProvenance(
       !c.evidenceIds
     )
       throw new Error(c.testCaseId + ': missing behavior provenance');
+    const evidenceBacked =
+      c.expectedBehaviorSource === 'observed' ||
+      c.evidenceIds.length > 0 ||
+      (c.selectorEvidence?.length || 0) > 0;
+    if (evidenceBacked && !c.explorationHash)
+      throw new Error(
+        c.testCaseId +
+          ': evidence-backed cases require an exploration fingerprint'
+      );
+    if (c.expectedBehaviorSource === 'requirement' && !c.requirementsHash)
+      throw new Error(
+        c.testCaseId +
+          ': requirement-backed cases require a requirements fingerprint'
+      );
+    if (
+      c.requirementsHash &&
+      (!options.requirements ||
+        c.requirementsHash !== contentHash(options.requirements))
+    )
+      throw new Error(c.testCaseId + ': requirements fingerprint mismatch');
     if (c.application && c.application !== options.app)
       throw new Error(c.testCaseId + ': case application mismatch');
     if (

@@ -12,6 +12,7 @@ export const explorationSchema = z
           title: z.string(),
           headings: z.array(z.string()),
           screenshot: z.string().min(1),
+          screenshotSha256: z.string().regex(/^[a-f0-9]{64}$/),
           elements: z.array(
             z.strictObject({
               evidenceId: z.string().min(1),

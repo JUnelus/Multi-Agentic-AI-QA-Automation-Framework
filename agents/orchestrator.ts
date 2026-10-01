@@ -1,3 +1,4 @@
+import { classifyFailure } from '../shared/validation/classify';
 import {
   importExploration,
   validateExploration,
@@ -228,7 +229,7 @@ export async function pipeline(options: PipelineOptions) {
       ? message.replaceAll(process.env.OPENAI_API_KEY, '[REDACTED]')
       : message;
     manifest.validation.finalResult = 'failed';
-    manifest.validation.category = 'GENERATOR_ERROR';
+    manifest.validation.category = classifyFailure('schema', safeMessage);
     manifest.validation.schema = {
       status: 'failed',
       diagnostics: safeMessage,

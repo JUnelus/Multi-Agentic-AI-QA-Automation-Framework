@@ -1,5 +1,7 @@
 import {
   validateProvenance,
+  contentHash,
+  readExploration,
   evidenceHash,
   validateExploration
 } from '../shared/exploration/evidence';
@@ -10,10 +12,7 @@ import { testCasesSchema } from '../shared/schemas/test-case.schema';
 import { parseJsonResponse } from '../shared/utils/json-response';
 import { generateWithOpenAI, Model } from '../shared/utils/openai-client';
 import { exportTestCases } from '../shared/utils/testcases';
-import {
-  Exploration,
-  explorationSchema
-} from '../shared/schemas/explorer.schema';
+import { Exploration } from '../shared/schemas/explorer.schema';
 import { z } from 'zod';
 export async function createTestCases(
   config: AppConfig,
@@ -45,7 +44,8 @@ export async function createTestCases(
     ...c,
     reviewStatus: 'draft' as const,
     application: exploration.app,
-    explorationHash: evidenceHash(exploration)
+    explorationHash: evidenceHash(exploration),
+    requirementsHash: requirements ? contentHash(requirements) : undefined
   }));
   validateProvenance(cases, exploration, {
     app: exploration.app,
@@ -64,11 +64,7 @@ if (require.main === module) {
   } else
     createTestCases(
       loadAppConfig(app),
-      validateExploration(
-        explorationSchema.parse(JSON.parse(fs.readFileSync(input, 'utf8'))),
-        app,
-        loadAppConfig(app)
-      )
+      readExploration(input, app, loadAppConfig(app))
     )
       .then((result) => exportTestCases(result.cases, path.dirname(input)))
       .catch(() => {

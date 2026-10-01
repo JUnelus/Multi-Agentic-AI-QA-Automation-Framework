@@ -7,7 +7,8 @@ import {
   validateExploration,
   importExploration,
   validateProvenance,
-  evidenceHash
+  evidenceHash,
+  contentHash
 } from '../../shared/exploration/evidence';
 import { Exploration } from '../../shared/schemas/explorer.schema';
 import { loadAppConfig } from '../../shared/utils/app-config';
@@ -25,6 +26,9 @@ function evidence(): Exploration {
         title: 'Login',
         headings: [],
         screenshot: 'screenshots/page.png',
+        screenshotSha256: contentHash(
+          Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])
+        ),
         elements: [
           {
             evidenceId: 'OBS-1',
@@ -88,6 +92,21 @@ test('screenshot import copies evidence, preserves identity, rejects missing and
       image
     );
     assert.equal(evidenceHash(imported), evidenceHash(evidence()));
+    fs.writeFileSync(
+      path.join(source, 'screenshots/page.png'),
+      Buffer.concat([image, Buffer.from('changed')])
+    );
+    assert.throws(
+      () =>
+        importExploration(
+          file,
+          path.join(root, 'tampered'),
+          'saucedemo',
+          config
+        ),
+      /digest mismatch/
+    );
+    fs.writeFileSync(path.join(source, 'screenshots/page.png'), image);
     for (const screenshot of [
       '../page.png',
       'screenshots/../page.png',
@@ -129,6 +148,7 @@ test('imported cases share Agent 1 provenance validation and cannot spoof observ
     { selectorEvidence: [{ evidenceId: 'fake', selector: '#username' }] },
     { application: 'uitestingplayground' },
     { explorationHash: 'a'.repeat(64) },
+    { explorationHash: undefined },
     { expectedBehaviorSource: 'requirement' },
     { expectedBehaviorSource: undefined }
   ])
@@ -140,7 +160,13 @@ test('imported cases share Agent 1 provenance validation and cannot spoof observ
   );
   assert.doesNotThrow(() =>
     validateProvenance(
-      [{ ...original, expectedBehaviorSource: 'requirement' }],
+      [
+        {
+          ...original,
+          expectedBehaviorSource: 'requirement',
+          requirementsHash: contentHash('A supplied requirement')
+        }
+      ],
       evidence(),
       { app: 'saucedemo', config, requirements: 'A supplied requirement' }
     )
@@ -152,4 +178,40 @@ test('imported cases share Agent 1 provenance validation and cannot spoof observ
       { app: 'saucedemo', config }
     )
   );
+});
+
+test('requirements provenance rejects missing and substituted content fingerprints', () => {
+  const req = 'Approved requirement';
+  const c = {
+    ...readTestCases('tests/fixtures/saucedemo-test-cases.json')[0],
+    expectedBehaviorSource: 'requirement' as const,
+    requirementsHash: contentHash(req)
+  };
+  assert.doesNotThrow(() =>
+    validateProvenance([c], evidence(), {
+      app: 'saucedemo',
+      config,
+      requirements: req
+    })
+  );
+  for (const requirements of [undefined, '', 'Unrelated requirement'])
+    assert.throws(() =>
+      validateProvenance([c], evidence(), {
+        app: 'saucedemo',
+        config,
+        requirements
+      })
+    );
+  assert.throws(
+    () =>
+      validateProvenance([{ ...c, requirementsHash: undefined }], evidence(), {
+        app: 'saucedemo',
+        config,
+        requirements: req
+      }),
+    /require.*fingerprint/
+  );
+  const changed = evidence();
+  changed.pages[0].screenshotSha256 = 'f'.repeat(64);
+  assert.notEqual(evidenceHash(changed), evidenceHash(evidence()));
 });
