@@ -68,7 +68,11 @@ export function auditCode(
       'configure',
       'use',
       'slow',
-      'setTimeout'
+      'setTimeout',
+      // Suite hooks receive separate Playwright timeout slots outside the
+      // per-case budget and cannot use worker-scoped browser capabilities.
+      'beforeAll',
+      'afterAll'
     ]);
     function visit(node: ts.Node) {
       if (
@@ -83,7 +87,10 @@ export function auditCode(
           node.propertyName.getText(source).replace(/['"]/g, '')
         )
       )
-        errors.push('Unsupported destructured capability');
+        errors.push(
+          'Unsupported destructured capability: ' +
+            node.propertyName.getText(source).replace(/['"]/g, '')
+        );
       if (ts.isElementAccessExpression(node)) {
         const key = node.argumentExpression;
         if (
@@ -158,7 +165,9 @@ export function auditCode(
           'navigator',
           'browser',
           'Reflect',
-          '__proto__'
+          '__proto__',
+          'beforeAll',
+          'afterAll'
         ].includes(node.text)
       )
         errors.push('Unsupported runtime capability: ' + node.text);
@@ -238,33 +247,6 @@ export function auditCode(
   }
   errors.push(...assertionContract(code, cases));
   return [...new Set(errors)];
-}
-// Every beforeAll/afterAll declaration receives a separate Playwright hook timeout,
-// so the execution budget must reserve time for each one.
-export function countSuiteHooks(code: GeneratedCode): number {
-  let count = 0;
-  for (const file of [...code.pageObjects, ...code.specFiles]) {
-    const source = ts.createSourceFile(
-      file.fileName,
-      file.code,
-      ts.ScriptTarget.Latest,
-      true
-    );
-    function visit(node: ts.Node): void {
-      if (ts.isCallExpression(node)) {
-        const callee = node.expression;
-        const name = ts.isPropertyAccessExpression(callee)
-          ? callee.name.text
-          : ts.isIdentifier(callee)
-            ? callee.text
-            : undefined;
-        if (name === 'beforeAll' || name === 'afterAll') count++;
-      }
-      ts.forEachChild(node, visit);
-    }
-    visit(source);
-  }
-  return count;
 }
 export function typecheckDirectory(directory: string): string[] {
   const config = ts.readConfigFile('tsconfig.json', ts.sys.readFile);

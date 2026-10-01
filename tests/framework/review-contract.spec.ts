@@ -1,11 +1,7 @@
 import fs from 'node:fs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import {
-  auditCode,
-  countSuiteHooks,
-  readCode
-} from '../../shared/validation/code-contract';
+import { auditCode, readCode } from '../../shared/validation/code-contract';
 import { guardedTestModule } from '../../shared/validation/assertion-contract';
 import { readTestCases } from '../../shared/utils/testcases';
 import { loadAppConfig } from '../../shared/utils/app-config';
@@ -160,36 +156,53 @@ test('report binding treats CASE-1 and CASE-1-NEG independently', () => {
   );
 });
 test('execution budget scales with case count and rejects unbounded workloads', () => {
-  assert.equal(executionBudget(1).globalTimeoutMs, 60000);
-  assert.equal(executionBudget(4).globalTimeoutMs, 150000);
-  assert.equal(executionBudget(4).processTimeoutMs, 180000);
-  for (const count of [0, -1, 1.5, 201, 30, Infinity])
+  assert.equal(executionBudget(1).globalTimeoutMs, 90000);
+  assert.equal(executionBudget(4).globalTimeoutMs, 270000);
+  assert.equal(executionBudget(4).processTimeoutMs, 300000);
+  for (const count of [0, -1, 1.5, 201, 15, 30, Infinity])
     assert.throws(() => executionBudget(count));
   assert.throws(() => executionBudget(1, 500));
 });
 
-test('execution budget reserves a separate timeout for every beforeAll/afterAll hook', () => {
-  assert.equal(executionBudget(1).suiteHookCount, 0);
-  assert.equal(executionBudget(1, 30000, 2).globalTimeoutMs, 120000);
-  assert.equal(executionBudget(1, 30000, 2).processTimeoutMs, 150000);
-  assert.doesNotThrow(() => executionBudget(28));
-  assert.throws(() => executionBudget(28, 30000, 2), /split the approved/);
-  for (const hooks of [-1, 1.5, 201])
-    assert.throws(() => executionBudget(1, 30000, hooks));
-  const hooked = code(
-    'test.beforeAll(async () => {});\n' +
-      'test.describe("group", () => {\n' +
-      '  test.afterAll(async () => {});\n' +
-      '  test.beforeEach(async ({ page }) => { await page.goto("/"); });\n' +
-      '  ' +
-      declaration('CASE-1', assertion) +
-      '\n});'
-  );
-  assert.equal(countSuiteHooks(hooked), 2);
-  assert.equal(countSuiteHooks(code(declaration('CASE-1', assertion))), 0);
-  assert.equal(
-    countSuiteHooks(readCode('tests/fixtures/generated/saucedemo')),
-    0
+test('execution budget reserves the Playwright after-hooks slot for every case', () => {
+  // Playwright 1.60 runs afterEach hooks and test-scoped fixture teardown in a
+  // separate slot whose timeout equals the test timeout.
+  const one = executionBudget(1);
+  assert.equal(one.perTestMs, 30000);
+  assert.equal(one.afterHooksMs, 30000);
+  assert.equal(one.globalTimeoutMs, 30000 + 1 * (30000 + 30000));
+  assert.equal(executionBudget(3, 10000).globalTimeoutMs, 90000);
+  assert.doesNotThrow(() => executionBudget(14));
+  assert.throws(() => executionBudget(15), /split the approved/);
+});
+
+test('suite hooks are rejected in every syntactic form so per-case budgets stay exact', () => {
+  for (const body of [
+    'test.beforeAll(async () => {});',
+    'test.afterAll(async () => {});',
+    'test["beforeAll"](async () => {});',
+    'test[`afterAll`](async () => {});',
+    'const { beforeAll: setup } = test; setup(async () => {});',
+    'const { afterAll } = test; afterAll(async () => {});',
+    'const hook = test.afterAll; hook(async () => {});',
+    'for (let i = 0; i < 3; i++) test.beforeAll(async () => {});',
+    'test.describe("group", () => { test.beforeAll(async () => {}); });'
+  ])
+    assert.ok(
+      auditCode(code(body + declaration('CASE-1', assertion)), [cases[0]])
+        .length > 0,
+      body
+    );
+  assert.deepEqual(
+    auditCode(
+      code(
+        'test.beforeEach(async ({ page }) => { await page.goto("/"); });\n' +
+          'test.afterEach(async ({ page }) => { await expect(page).toHaveURL(/./); });\n' +
+          declaration('CASE-1', assertion)
+      ),
+      [cases[0]]
+    ),
+    []
   );
 });
 
@@ -217,7 +230,7 @@ test('manual workflow reserves time for bounded repairs, model retries and setup
     'utf8'
   );
   const minutes = Number(/timeout-minutes:\s*(\d+)/.exec(workflow)?.[1]);
-  const maximumValidation = executionBudget(29).processTimeoutMs;
+  const maximumValidation = executionBudget(14).processTimeoutMs;
   const fourAttempts = maximumValidation * 4;
   const twoModelsWithRetries = 2 * 3 * 120000;
   const setupAndUpload = 20 * 60000;

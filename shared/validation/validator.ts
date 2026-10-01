@@ -11,12 +11,7 @@ import {
   validationReportSchema
 } from '../schemas/validation-report.schema';
 import { TestCase } from '../schemas/test-case.schema';
-import {
-  auditCode,
-  countSuiteHooks,
-  readCode,
-  typecheckDirectory
-} from './code-contract';
+import { auditCode, readCode, typecheckDirectory } from './code-contract';
 import { classifyFailure } from './classify';
 import { inspectPlaywrightReport } from './playwright-report';
 export const notRun = (): Gate => ({
@@ -84,11 +79,7 @@ export function runPlaywright(
   const start = Date.now();
   const budget = list
     ? { globalTimeoutMs: 60000, processTimeoutMs: 90000 }
-    : executionBudget(
-        cases.length || 1,
-        undefined,
-        countSuiteHooks(readCode(directory))
-      );
+    : executionBudget(cases.length || 1);
   const args = [
     require.resolve('@playwright/test/cli'),
     'test',
@@ -187,11 +178,7 @@ export async function validateCode(
           before = artifactHash(directory);
           if (!cases.length)
             throw new Error('Validation requires approved test cases');
-          executionBudget(
-            cases.length,
-            undefined,
-            countSuiteHooks(readCode(directory))
-          );
+          executionBudget(cases.length);
         }
         const errors =
           stage === 'schema'
