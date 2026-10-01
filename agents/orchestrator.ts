@@ -23,7 +23,7 @@ import {
   hashInput,
   addUsage
 } from '../shared/utils/run-manifest';
-import { stageCode } from '../shared/utils/safe-path';
+import { resolveRepositoryInput, stageCode } from '../shared/utils/safe-path';
 import { readCode } from '../shared/validation/code-contract';
 import { validateCode } from '../shared/validation/validator';
 import { repairLoop } from '../shared/validation/repair';
@@ -68,7 +68,9 @@ export async function pipeline(options: PipelineOptions) {
     options.noAi &&
     options.casesFile &&
     !options.validateOnly &&
-    hashInput(readTestCases(options.casesFile)) !==
+    hashInput(
+      readTestCases(resolveRepositoryInput(options.casesFile, 'file'))
+    ) !==
       hashInput(
         readTestCases('tests/fixtures/' + options.app + '-test-cases.json')
       )
@@ -89,8 +91,25 @@ export async function pipeline(options: PipelineOptions) {
     manifest.demoApproval = !!options.demoApproveDrafts || !!options.noAi;
     let cases;
     let evidence: Exploration | undefined;
-    const requirements = options.requirementsFile
-      ? fs.readFileSync(options.requirementsFile, 'utf8')
+    // Confine every operator-supplied path before anything is read or persisted.
+    const inputs = {
+      cases: options.casesFile
+        ? resolveRepositoryInput(options.casesFile, 'file')
+        : undefined,
+      exploration: options.explorationFile
+        ? resolveRepositoryInput(options.explorationFile, 'file')
+        : undefined,
+      requirements: options.requirementsFile
+        ? resolveRepositoryInput(options.requirementsFile, 'file')
+        : undefined,
+      code: options.codeDirectory
+        ? resolveRepositoryInput(options.codeDirectory, 'directory')
+        : undefined
+    };
+    if (inputs.requirements && fs.statSync(inputs.requirements).size > 1048576)
+      throw new Error('Requirements input exceeds 1 MiB');
+    const requirements = inputs.requirements
+      ? fs.readFileSync(inputs.requirements, 'utf8')
       : undefined;
     if (requirements) {
       manifest.inputHashes.requirements = hashInput(requirements);
@@ -98,13 +117,8 @@ export async function pipeline(options: PipelineOptions) {
       manifest.artifacts.requirements = 'requirements.txt';
     }
     if (!options.validateOnly || options.explorationFile) {
-      evidence = options.explorationFile
-        ? importExploration(
-            options.explorationFile,
-            directory,
-            options.app,
-            config
-          )
+      evidence = inputs.exploration
+        ? importExploration(inputs.exploration, directory, options.app, config)
         : await explore(options.app, config, directory);
       validateExploration(evidence, options.app, config);
       fs.writeFileSync(
@@ -119,7 +133,7 @@ export async function pipeline(options: PipelineOptions) {
       }
     }
     if (!options.validateOnly) {
-      if (options.casesFile) cases = readTestCases(options.casesFile);
+      if (inputs.cases) cases = readTestCases(inputs.cases);
       else {
         const baseline = options.noAi
           ? readTestCases('tests/fixtures/' + options.app + '-test-cases.json')
@@ -145,7 +159,7 @@ export async function pipeline(options: PipelineOptions) {
         // Only the committed acceptance baseline receives fixture approval.
         cases = baseline || created.cases;
       }
-    } else cases = readTestCases(options.casesFile!);
+    } else cases = readTestCases(inputs.cases!);
     validateProvenance(cases, evidence, {
       app: options.app,
       config,
@@ -167,7 +181,7 @@ export async function pipeline(options: PipelineOptions) {
     manifest.inputHashes.selectedCases = hashInput(selected);
     manifest.counts.automationReady = selected.length;
     let code;
-    if (options.validateOnly) code = readCode(options.codeDirectory!);
+    if (options.validateOnly) code = readCode(inputs.code!);
     else {
       const fixtureModel: Model | undefined = options.noAi
         ? async () => ({
@@ -215,11 +229,8 @@ export async function pipeline(options: PipelineOptions) {
       result.report.finalResult === 'passed' &&
       selected.every((c) => c.reviewStatus === 'approved')
     ) {
-      manifest.artifacts.approved = promote(
-        result.directory,
-        directory,
-        manifest
-      );
+      // Promotion assigns manifest.artifacts.approved before serializing it.
+      promote(result.directory, directory, manifest);
     }
     saveRun(directory, manifest);
     return run;

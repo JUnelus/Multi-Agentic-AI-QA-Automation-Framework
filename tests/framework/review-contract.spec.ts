@@ -1,7 +1,11 @@
 import fs from 'node:fs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { auditCode, readCode } from '../../shared/validation/code-contract';
+import {
+  auditCode,
+  countSuiteHooks,
+  readCode
+} from '../../shared/validation/code-contract';
 import { guardedTestModule } from '../../shared/validation/assertion-contract';
 import { readTestCases } from '../../shared/utils/testcases';
 import { loadAppConfig } from '../../shared/utils/app-config';
@@ -162,6 +166,31 @@ test('execution budget scales with case count and rejects unbounded workloads', 
   for (const count of [0, -1, 1.5, 201, 30, Infinity])
     assert.throws(() => executionBudget(count));
   assert.throws(() => executionBudget(1, 500));
+});
+
+test('execution budget reserves a separate timeout for every beforeAll/afterAll hook', () => {
+  assert.equal(executionBudget(1).suiteHookCount, 0);
+  assert.equal(executionBudget(1, 30000, 2).globalTimeoutMs, 120000);
+  assert.equal(executionBudget(1, 30000, 2).processTimeoutMs, 150000);
+  assert.doesNotThrow(() => executionBudget(28));
+  assert.throws(() => executionBudget(28, 30000, 2), /split the approved/);
+  for (const hooks of [-1, 1.5, 201])
+    assert.throws(() => executionBudget(1, 30000, hooks));
+  const hooked = code(
+    'test.beforeAll(async () => {});\n' +
+      'test.describe("group", () => {\n' +
+      '  test.afterAll(async () => {});\n' +
+      '  test.beforeEach(async ({ page }) => { await page.goto("/"); });\n' +
+      '  ' +
+      declaration('CASE-1', assertion) +
+      '\n});'
+  );
+  assert.equal(countSuiteHooks(hooked), 2);
+  assert.equal(countSuiteHooks(code(declaration('CASE-1', assertion))), 0);
+  assert.equal(
+    countSuiteHooks(readCode('tests/fixtures/generated/saucedemo')),
+    0
+  );
 });
 
 test('indirect browser factories, aliases, computed capabilities and timeout overrides are rejected', () => {

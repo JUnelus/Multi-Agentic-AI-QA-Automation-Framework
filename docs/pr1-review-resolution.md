@@ -1,6 +1,6 @@
 # PR 1 review resolution
 
-Review fixes were implemented and tested on Windows on 2026-09-30 (America/New_York). No paid OpenAI calls were made. PR remains unmerged.
+Review fixes were implemented and tested on Windows on 2026-09-30 (America/New_York). No paid OpenAI calls were made. The repository owner merged PR 1 on 2026-10-01; the final Codex re-review findings below were addressed afterwards in a follow-up pull request.
 
 ## Findings addressed
 
@@ -31,6 +31,14 @@ The completed re-review of d259e1c produced seven further findings, now fixed:
 - Require an exploration fingerprint whenever a supplied case claims observations or selector evidence; missing fingerprints cannot bypass validation.
 - Preserve infrastructure error categories in pre-validation reports. A real missing-file pipeline regression verifies a persisted ENVIRONMENT_ERROR.
 - Stamp requirement content fingerprints in Agent 1 and reject missing or substituted requirements when resuming reviewed cases.
+
+## Final Codex re-review findings (addressed after merge)
+
+The re-review of 378f68b produced three further findings, now fixed:
+
+- P1 input confinement: `--cases`, `--exploration`, `--requirements` and `--code-dir` are resolved beneath the repository checkout and must be regular files/directories without symlinks before anything is read or persisted; requirements are capped at 1 MiB. The manual workflow additionally rejects absolute, traversal and symlinked inputs in Bash. Tests: safe-path.spec.ts (confinement, special files, junctions) and orchestrator.spec.ts (outside and `/proc/self/environ` inputs leave no requirements.txt or manifest pointer).
+- P2 suite-hook budget: `beforeAll`/`afterAll` declarations are counted statically and each reserves a separate per-test allowance in the execution budget, which is recorded in gate diagnostics. Tests: review-contract.spec.ts (hook counting, budget arithmetic, oversized batch rejection).
+- P2 staged promotion: the approved version is assembled in a hidden sibling directory and published with one rename; failures remove staging or an unpublished version, restore the manifest pointer and allow a retry with the same run ID. Tests: promotion.spec.ts (mid-stage failure, pointer failure, retry, consistent manifests, no temporary directories).
 
 ## Commands and results
 

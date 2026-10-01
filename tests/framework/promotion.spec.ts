@@ -160,3 +160,77 @@ test('two promotions preserve immutable versions, consistent manifests and repla
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
+
+test('a failed promotion leaves no partial version, restores the manifest pointer and can be retried', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-promote-retry-'));
+  try {
+    const { directory, manifest } = createRun('saucedemo', 'fixture', root);
+    const staging = path.join(directory, 'staging');
+    stageCode(readCode('tests/fixtures/generated/saucedemo'), staging);
+    const cases = readTestCases('tests/fixtures/saucedemo-test-cases.json');
+    await exportTestCases(cases, directory);
+    manifest.inputHashes.testCases = hashInput(cases);
+    manifest.inputHashes.selectedCases = hashInput(cases);
+    const pass = { status: 'passed' as const, diagnostics: '', durationMs: 0 };
+    Object.assign(manifest.validation, {
+      schema: pass,
+      typecheck: pass,
+      discovery: pass,
+      execution: pass,
+      finalResult: 'passed',
+      artifactHash: artifactHash(staging)
+    });
+    const approvedRoot = path.join(root, 'approved');
+    const appDirectory = path.join(approvedRoot, 'saucedemo');
+    const version = path.join(appDirectory, manifest.runId);
+    // Failure after the code is staged but before the version is complete.
+    const counts = manifest.counts;
+    Object.defineProperty(manifest, 'counts', {
+      get() {
+        throw new Error('simulated manifest serialization failure');
+      },
+      enumerable: true,
+      configurable: true
+    });
+    assert.throws(
+      () => promote(staging, directory, manifest, approvedRoot),
+      /serialization failure/
+    );
+    Object.defineProperty(manifest, 'counts', {
+      value: counts,
+      writable: true,
+      enumerable: true,
+      configurable: true
+    });
+    assert.equal(manifest.artifacts.approved, undefined);
+    assert.ok(!fs.existsSync(version));
+    assert.deepEqual(fs.readdirSync(appDirectory), []);
+    // Failure while publishing the current pointer after the version rename.
+    fs.mkdirSync(path.join(appDirectory, 'current.json'));
+    assert.throws(() => promote(staging, directory, manifest, approvedRoot));
+    fs.rmdirSync(path.join(appDirectory, 'current.json'));
+    assert.equal(manifest.artifacts.approved, undefined);
+    assert.ok(!fs.existsSync(version));
+    assert.deepEqual(fs.readdirSync(appDirectory), []);
+    // The same run ID can then be promoted; both persisted manifests agree.
+    assert.equal(promote(staging, directory, manifest, approvedRoot), version);
+    saveRun(directory, manifest);
+    assert.equal(manifest.artifacts.approved, version);
+    assert.deepEqual(
+      JSON.parse(fs.readFileSync(path.join(version, 'manifest.json'), 'utf8')),
+      JSON.parse(fs.readFileSync(path.join(directory, 'manifest.json'), 'utf8'))
+    );
+    assert.deepEqual(fs.readdirSync(appDirectory).sort(), [
+      'current.json',
+      manifest.runId
+    ]);
+    assert.equal(
+      JSON.parse(
+        fs.readFileSync(path.join(appDirectory, 'current.json'), 'utf8')
+      ).runId,
+      manifest.runId
+    );
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});

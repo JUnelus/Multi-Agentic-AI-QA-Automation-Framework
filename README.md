@@ -115,7 +115,7 @@ The baseline verifies successful login, the inventory URL, visible inventory, an
 | `npm run agent:validate-repair -- STAGING_DIRECTORY`   | Standalone validation and import repair, no promotion |
 | `npm run pipeline:uitestingplayground -- --no-ai`      | Playground text-input baseline pipeline               |
 
-Orchestrator flags: `--explore-only`, `--generate-cases-only`, `--generate-code-only --cases FILE`, `--validate-only --cases FILE --code-dir DIR`, `--no-ai`, `--max-repairs 0..3`, `--requirements FILE`, `--exploration FILE`, and `--demo-approve-drafts`. Select at most one partial mode. Code-generation mode skips case generation but still validates the generated code. Validate-only copies supplied code into a new run before validation.
+Orchestrator flags: `--explore-only`, `--generate-cases-only`, `--generate-code-only --cases FILE`, `--validate-only --cases FILE --code-dir DIR`, `--no-ai`, `--max-repairs 0..3`, `--requirements FILE`, `--exploration FILE`, and `--demo-approve-drafts`. Select at most one partial mode. Code-generation mode skips case generation but still validates the generated code. Validate-only copies supplied code into a new run before validation. Every supplied path must be a regular file or directory inside the repository checkout; absolute paths outside it, traversal and symlinks are rejected before anything is read.
 
 ## Quality gates and repair
 
@@ -206,7 +206,7 @@ Playground has bounded routes for Dynamic ID and Text Input plus a generated tex
 
 PR/push CI installs Chromium, runs framework checks, curated SauceDemo tests, generated compilation/discovery, the login fixture, and the no-AI pipeline. Reports are uploaded even on failure. No OpenAI secret is required.
 
-The manual **Manual agentic pipeline** workflow offers no-AI, draft-case generation, and generation from a reviewed repository JSON file. Paid modes use the `OPENAI_API_KEY` GitHub secret. Generated drafts never silently become approved in that workflow. The artifact includes both run evidence and promoted immutable versions with current.json.
+The manual **Manual agentic pipeline** workflow offers no-AI, draft-case generation, and generation from a reviewed repository JSON file. Paid modes use the `OPENAI_API_KEY` GitHub secret. Generated drafts never silently become approved in that workflow. Workflow path inputs are checked to be repository-relative regular files before the pipeline runs, and the orchestrator confines them again. The artifact includes both run evidence and promoted immutable versions with current.json.
 
 ## Limitations
 
