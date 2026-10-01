@@ -21,13 +21,14 @@ export class ProductDetailsPage {
 
   async expectLoadedForProduct(productName: string): Promise<void> {
     await expect(this.page).toHaveURL(/inventory-item.html/);
+    // SPA URL updates can precede replacement of the six inventory cards.
+    await expect(this.backToProductsButton).toBeVisible();
     await expect(this.name).toHaveText(productName);
     await expect(this.description).toBeVisible();
     await expect(this.price).toContainText('$');
     await expect(this.image).toBeVisible();
     await expect(this.image).toHaveAttribute('alt', /.+/);
     await expect(this.addToCartButton).toBeVisible();
-    await expect(this.backToProductsButton).toBeVisible();
   }
 
   async backToProducts(): Promise<void> {
