@@ -1,0 +1,56 @@
+name: Manual agentic pipeline
+on:
+  workflow_dispatch:
+    inputs:
+      app:
+        type: choice
+        options: [saucedemo, uitestingplayground]
+        default: saucedemo
+      mode:
+        type: choice
+        options: [no-ai, generate-cases-only, approved-cases]
+        default: no-ai
+      cases:
+        description: Repository-relative reviewed canonical JSON (approved-cases mode)
+        type: string
+        default: ''
+permissions:
+  contents: read
+jobs:
+  pipeline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      QA_APP_INPUT: ${{ inputs.app }}
+      QA_MODE_INPUT: ${{ inputs.mode }}
+      QA_CASES_INPUT: ${{ inputs.cases }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Fixture pipeline
+        if: inputs.mode == 'no-ai'
+        run: npx tsx agents/orchestrator.ts --app "$QA_APP_INPUT" --no-ai
+      - name: Generate draft cases for review
+        if: inputs.mode == 'generate-cases-only'
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_MODEL: ${{ vars.OPENAI_MODEL || 'gpt-5.5' }}
+        run: npx tsx agents/orchestrator.ts --app "$QA_APP_INPUT" --generate-cases-only
+      - name: Generate and validate approved cases
+        if: inputs.mode == 'approved-cases'
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_MODEL: ${{ vars.OPENAI_MODEL || 'gpt-5.5' }}
+        run: npx tsx agents/orchestrator.ts --app "$QA_APP_INPUT" --cases "$QA_CASES_INPUT"
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: agentic-run
+          path: generated/runs/
+          retention-days: 14
+

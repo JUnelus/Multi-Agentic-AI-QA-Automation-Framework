@@ -1,43 +1,38 @@
-name: Playwright Tests
-
+name: Deterministic QA validation
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
   workflow_dispatch:
-
+permissions:
+  contents: read
 jobs:
   test:
     runs-on: ubuntu-latest
-
-    env:
-      TARGET_APP: saucedemo
-
+    timeout-minutes: 15
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Install Playwright browsers
-        run: npx playwright install --with-deps
-
-      - name: Run SauceDemo tests
-        run: npm run test:saucedemo
-
-      - name: Upload Playwright report
-        uses: actions/upload-artifact@v6
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run typecheck
+      - run: npm run test:framework
+      - run: npm run test:saucedemo
+      - run: npm run typecheck:generated
+      - run: npm run test:generated:list
+      - run: npm run test:generated:fixture
+      - run: npm run pipeline:saucedemo:no-ai
+      - uses: actions/upload-artifact@v6
         if: always()
         with:
-          name: playwright-report
-          path: playwright-report/
-          retention-days: 30
+          name: qa-validation
+          path: |
+            playwright-report/
+            test-results/
+            generated/runs/
+          retention-days: 14
 
