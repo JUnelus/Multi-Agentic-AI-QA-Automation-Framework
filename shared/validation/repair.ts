@@ -1,3 +1,4 @@
+import { requireTerminalReport } from './terminal-report';
 import fs from 'node:fs';
 import path from 'node:path';
 import ts from 'typescript';
@@ -68,7 +69,10 @@ export async function repairLoop(options: {
     throw new Error('maxRepairs must be between 0 and 3');
   let code = options.code,
     directory = options.directory;
-  let report = await options.validate(code, directory, 0);
+  let report = requireTerminalReport(
+    await options.validate(code, directory, 0),
+    'initial validation'
+  );
   fs.mkdirSync(path.join(options.runDirectory, 'reports', 'attempt-0'), {
     recursive: true
   });
@@ -106,7 +110,10 @@ export async function repairLoop(options: {
       )
     );
     code = candidate;
-    report = await options.validate(code, directory, attempts);
+    report = requireTerminalReport(
+      await options.validate(code, directory, attempts),
+      'repair validation'
+    );
     report.initialTypecheck = initialTypecheck;
     report.repairAttempts = attempts;
     fs.writeFileSync(
@@ -116,5 +123,9 @@ export async function repairLoop(options: {
   }
   report.initialTypecheck = initialTypecheck;
   report.repairAttempts = attempts;
-  return { code, directory, report };
+  return {
+    code,
+    directory,
+    report: requireTerminalReport(report, 'final validation')
+  };
 }

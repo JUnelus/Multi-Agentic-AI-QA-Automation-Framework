@@ -1,3 +1,4 @@
+import { writeAtomicJson } from '../utils/atomic-json';
 import fs from 'node:fs';
 import path from 'node:path';
 import { RunManifest } from '../schemas/run-manifest.schema';
@@ -41,29 +42,16 @@ export function promote(
   stageCode(readCode(directory), version);
   if (artifactHash(version) !== report.artifactHash)
     throw new Error('Promoted copy hash mismatch');
-  fs.writeFileSync(
-    path.join(version, 'manifest.json'),
-    JSON.stringify(manifest, null, 2)
-  );
+  manifest.artifacts.approved = version;
+  writeAtomicJson(path.join(version, 'manifest.json'), manifest);
   fs.copyFileSync(
     path.join(runDirectory, 'test-cases.json'),
     path.join(version, 'test-cases.json')
   );
-  const pointer = path.join(appDirectory, 'current.json');
-  const temporary = pointer + '.' + manifest.runId + '.tmp';
-  fs.writeFileSync(
-    temporary,
-    JSON.stringify(
-      {
-        runId: manifest.runId,
-        directory: manifest.runId,
-        artifactHash: report.artifactHash
-      },
-      null,
-      2
-    ),
-    { flag: 'wx' }
-  );
-  fs.renameSync(temporary, pointer);
+  writeAtomicJson(path.join(appDirectory, 'current.json'), {
+    runId: manifest.runId,
+    directory: manifest.runId,
+    artifactHash: report.artifactHash
+  });
   return version;
 }

@@ -1,9 +1,10 @@
+import { writeAtomicJson } from '../../shared/utils/atomic-json';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { createRun, hashInput } from '../../shared/utils/run-manifest';
+import { createRun, hashInput, saveRun } from '../../shared/utils/run-manifest';
 import { stageCode } from '../../shared/utils/safe-path';
 import { readCode } from '../../shared/validation/code-contract';
 import { artifactHash } from '../../shared/validation/validator';
@@ -68,6 +69,92 @@ test('promotion requires all gates and unchanged code/cases; versions remain imm
     assert.throws(
       () => promote(staging, directory, manifest, approvedRoot),
       /all quality gates/
+    );
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('two promotions preserve immutable versions, consistent manifests and replace current atomically', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-promote-twice-'));
+  try {
+    const versions: string[] = [];
+    const snapshots: string[] = [];
+    for (let index = 0; index < 2; index++) {
+      const { directory, manifest } = createRun('saucedemo', 'fixture', root);
+      const staging = path.join(directory, 'staging');
+      stageCode(readCode('tests/fixtures/generated/saucedemo'), staging);
+      const cases = readTestCases('tests/fixtures/saucedemo-test-cases.json');
+      await exportTestCases(cases, directory);
+      manifest.inputHashes.testCases = hashInput(cases);
+      manifest.inputHashes.selectedCases = hashInput(cases);
+      const pass = {
+        status: 'passed' as const,
+        diagnostics: '',
+        durationMs: 0
+      };
+      Object.assign(manifest.validation, {
+        schema: pass,
+        typecheck: pass,
+        discovery: pass,
+        execution: pass,
+        finalResult: 'passed',
+        artifactHash: artifactHash(staging)
+      });
+      const version = promote(
+        staging,
+        directory,
+        manifest,
+        path.join(root, 'approved')
+      );
+      saveRun(directory, manifest);
+      const approved = fs.readFileSync(
+        path.join(version, 'manifest.json'),
+        'utf8'
+      );
+      assert.deepEqual(
+        JSON.parse(approved),
+        JSON.parse(
+          fs.readFileSync(path.join(directory, 'manifest.json'), 'utf8')
+        )
+      );
+      assert.equal(JSON.parse(approved).artifacts.approved, version);
+      versions.push(version);
+      snapshots.push(approved);
+      const pointer = JSON.parse(
+        fs.readFileSync(
+          path.join(root, 'approved/saucedemo/current.json'),
+          'utf8'
+        )
+      );
+      assert.equal(pointer.runId, manifest.runId);
+    }
+    versions.forEach((v, i) =>
+      assert.equal(
+        fs.readFileSync(path.join(v, 'manifest.json'), 'utf8'),
+        snapshots[i]
+      )
+    );
+    assert.equal(
+      fs
+        .readdirSync(path.join(root, 'approved/saucedemo'))
+        .filter((f) => f.endsWith('.tmp')).length,
+      0
+    );
+    const pointer = path.join(root, 'approved/saucedemo/current.json');
+    const previous = fs.readFileSync(pointer, 'utf8');
+    assert.throws(
+      () =>
+        writeAtomicJson(pointer, { broken: true }, () => {
+          throw new Error('simulated replacement failure');
+        }),
+      /replacement failure/
+    );
+    assert.equal(fs.readFileSync(pointer, 'utf8'), previous);
+    assert.equal(
+      fs.readdirSync(path.dirname(pointer)).filter((f) => f.endsWith('.tmp'))
+        .length,
+      0
     );
   } finally {
     fs.rmSync(root, { recursive: true, force: true });

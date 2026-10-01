@@ -1,3 +1,4 @@
+import { writeAtomicJson } from './atomic-json';
 import fs from 'node:fs';
 import path from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
@@ -57,8 +58,7 @@ export function saveRun(directory: string, manifest: RunManifest) {
     ]
   ] as const) {
     const destination = path.join(directory, name);
-    fs.writeFileSync(destination + '.tmp', JSON.stringify(data, null, 2));
-    fs.renameSync(destination + '.tmp', destination);
+    writeAtomicJson(destination, data);
   }
 }
 export function addUsage(manifest: RunManifest, usage?: RunManifest['usage']) {
