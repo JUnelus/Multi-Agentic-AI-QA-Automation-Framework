@@ -1,4 +1,6 @@
-# Implementation validation
+# Initial implementation validation
+
+This is the pre-review snapshot. See [PR 1 review resolution](pr1-review-resolution.md) for current checks, fixes and preserved failures.
 
 Validated locally on 2026-09-30 (America/New_York), on feature/agentic-qa-framework-v1. No paid OpenAI calls were made.
 
