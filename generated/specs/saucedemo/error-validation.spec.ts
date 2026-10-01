@@ -1,9 +1,9 @@
 import { test } from '@playwright/test';
-import { LoginPage } from '../pageObjects/LoginPage';
-import { InventoryPage } from '../pageObjects/InventoryPage';
-import { CartPage } from '../pageObjects/CartPage';
-import { CheckoutPage } from '../pageObjects/CheckoutPage';
-import { CheckoutOverviewPage } from '../pageObjects/CheckoutOverviewPage';
+import { LoginPage } from '../../page-objects/saucedemo/LoginPage';
+import { InventoryPage } from '../../page-objects/saucedemo/InventoryPage';
+import { CartPage } from '../../page-objects/saucedemo/CartPage';
+import { CheckoutPage } from '../../page-objects/saucedemo/CheckoutPage';
+import { CheckoutOverviewPage } from '../../page-objects/saucedemo/CheckoutOverviewPage';
 
 async function openCheckoutInformation(page: import('@playwright/test').Page): Promise<CheckoutPage> {
   const loginPage = new LoginPage(page);
@@ -31,7 +31,7 @@ test.describe('SauceDemo Error Validation', () => {
     const checkoutPage = await openCheckoutInformation(page);
     const overviewPage = new CheckoutOverviewPage(page);
     await checkoutPage.continue();
-    await checkoutPage.expectError('Error: First Name is required');
+    await checkoutPage.expectErrorMessage('Error: First Name is required');
     await checkoutPage.fillInformation('John', 'Doe', '12345');
     await checkoutPage.continue();
     await overviewPage.expectLoaded();
@@ -40,7 +40,7 @@ test.describe('SauceDemo Error Validation', () => {
   test('TC_ERROR_003 - verify checkout error close button dismisses error', async ({ page }) => {
     const checkoutPage = await openCheckoutInformation(page);
     await checkoutPage.continue();
-    await checkoutPage.expectError('Error: First Name is required');
+    await checkoutPage.expectErrorMessage('Error: First Name is required');
     await checkoutPage.dismissError();
     await checkoutPage.expectErrorDismissed();
   });
@@ -48,15 +48,15 @@ test.describe('SauceDemo Error Validation', () => {
   test('TC_ERROR_004 - directly access checkout page without login', async ({ page }) => {
     const loginPage = new LoginPage(page);
     await loginPage.gotoPath('checkout-step-one.html');
-    await loginPage.expectOnLoginPage();
-    await loginPage.expectErrorContaining('You can only access');
+    await loginPage.expectLoginPageVisible();
+    await loginPage.expectErrorMessage('You can only access');
   });
 
   test('TC_ERROR_005 - directly access cart page without login', async ({ page }) => {
     const loginPage = new LoginPage(page);
     await loginPage.gotoPath('cart.html');
-    await loginPage.expectOnLoginPage();
-    await loginPage.expectErrorContaining('You can only access');
+    await loginPage.expectLoginPageVisible();
+    await loginPage.expectErrorMessage('You can only access');
   });
 
   test('TC_ERROR_006 - use browser back after logout to access protected page', async ({ page }) => {
@@ -66,8 +66,8 @@ test.describe('SauceDemo Error Validation', () => {
     await loginPage.login('standard_user', 'secret_sauce');
     await inventoryPage.expectLoaded();
     await inventoryPage.logout();
-    await loginPage.expectOnLoginPage();
+    await loginPage.expectLoginPageVisible();
     await page.goBack();
-    await loginPage.expectOnLoginPage();
+    await loginPage.expectLoginPageVisible();
   });
 });

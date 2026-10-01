@@ -1,11 +1,11 @@
 import { expect, test } from '@playwright/test';
-import { LoginPage } from '../pageObjects/LoginPage';
-import { InventoryPage } from '../pageObjects/InventoryPage';
-import { CartPage } from '../pageObjects/CartPage';
-import { CheckoutPage } from '../pageObjects/CheckoutPage';
-import { CheckoutOverviewPage } from '../pageObjects/CheckoutOverviewPage';
-import { CheckoutCompletePage } from '../pageObjects/CheckoutCompletePage';
-import { AccessibilityPage } from '../pageObjects/AccessibilityPage';
+import { LoginPage } from '../../page-objects/saucedemo/LoginPage';
+import { InventoryPage } from '../../page-objects/saucedemo/InventoryPage';
+import { CartPage } from '../../page-objects/saucedemo/CartPage';
+import { CheckoutPage } from '../../page-objects/saucedemo/CheckoutPage';
+import { CheckoutOverviewPage } from '../../page-objects/saucedemo/CheckoutOverviewPage';
+import { CheckoutCompletePage } from '../../page-objects/saucedemo/CheckoutCompletePage';
+import { AccessibilityPage } from '../../page-objects/saucedemo/AccessibilityPage';
 
 async function login(page: import('@playwright/test').Page): Promise<InventoryPage> {
   const loginPage = new LoginPage(page);
@@ -28,7 +28,7 @@ async function completeCheckout(page: import('@playwright/test').Page): Promise<
   await checkoutPage.fillInformation('John', 'Doe', '12345');
   await checkoutPage.continue();
   await overviewPage.finish();
-  await completePage.expectOrderComplete();
+  await completePage.expectLoaded();
 }
 
 test.describe('SauceDemo Accessibility', () => {
@@ -83,7 +83,7 @@ test.describe('SauceDemo Accessibility', () => {
     await overviewPage.expectLoaded();
     await overviewPage.finishButton.focus();
     await page.keyboard.press('Enter');
-    await completePage.expectOrderComplete();
+    await completePage.expectLoaded();
   });
 
   test('TC_ACCESS_004 - verify form fields have accessible names', async ({ page }) => {
@@ -101,16 +101,16 @@ test.describe('SauceDemo Accessibility', () => {
     const inventoryPage = await login(page);
     await expect(inventoryPage.menuButton).toHaveAccessibleName(/Open Menu/i);
     await expect(inventoryPage.cartLink).toHaveAccessibleName(/Shopping Cart/i);
-    await expect(inventoryPage.productItem('Sauce Labs Backpack').getByRole('button', { name: 'Add to cart' })).toBeVisible();
+    await expect(inventoryPage.productByName('Sauce Labs Backpack').getByRole('button', { name: 'Add to cart' })).toBeVisible();
     await inventoryPage.addProduct('Sauce Labs Backpack');
-    await expect(inventoryPage.productItem('Sauce Labs Backpack').getByRole('button', { name: 'Remove' })).toBeVisible();
+    await expect(inventoryPage.productByName('Sauce Labs Backpack').getByRole('button', { name: 'Remove' })).toBeVisible();
     await inventoryPage.openCart();
     await expect(new CartPage(page).checkoutButton).toHaveAccessibleName('Checkout');
   });
 
   test('TC_ACCESS_006 - verify product images have appropriate alternative text', async ({ page }) => {
     const inventoryPage = await login(page);
-    await inventoryPage.expectProductImagesHaveAltText();
+    await inventoryPage.expectAllProductImagesHaveAccessibleAlternatives();
   });
 
   test('TC_ACCESS_007 - verify color contrast on major pages with automated scan', async ({ page }) => {
@@ -146,7 +146,7 @@ test.describe('SauceDemo Accessibility', () => {
     await expect(inventoryPage.logoutLink).toBeVisible();
     await page.keyboard.press('Tab');
     await expect(page.locator('[data-test=inventory-sidebar-link]')).toBeFocused();
-    await inventoryPage.closeMenuButton.focus();
+    await inventoryPage.menuCloseButton.focus();
     await page.keyboard.press('Enter');
     await expect(inventoryPage.logoutLink).toBeHidden();
   });

@@ -52,4 +52,8 @@ export class CheckoutPage {
     await expect(this.errorMessage).toBeVisible();
     await expect(this.errorMessage).toContainText(message);
   }
+  async dismissError() { await this.page.locator('[data-test="error-button"]').click(); }
+  async expectErrorDismissed() { await expect(this.errorMessage).toBeHidden(); }
+  async expectFormFieldsHaveAccessibleNames() { await expect(this.firstNameInput).toHaveAccessibleName(/First Name/i); await expect(this.lastNameInput).toHaveAccessibleName(/Last Name/i); await expect(this.postalCodeInput).toHaveAccessibleName(/Zip|Postal/i); }
+
 }

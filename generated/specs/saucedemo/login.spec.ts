@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
-import { LoginPage } from '../pageObjects/LoginPage';
-import { InventoryPage } from '../pageObjects/InventoryPage';
+import { LoginPage } from '../../page-objects/saucedemo/LoginPage';
+import { InventoryPage } from '../../page-objects/saucedemo/InventoryPage';
 
 const invalidCredentialsError = 'Epic sadface: Username and password do not match any user in this service';
 
@@ -17,31 +17,31 @@ test.describe('SauceDemo Login', () => {
     const loginPage = new LoginPage(page);
     await loginPage.goto();
     await loginPage.login('locked_out_user', 'secret_sauce');
-    await loginPage.expectOnLoginPage();
-    await loginPage.expectError('Epic sadface: Sorry, this user has been locked out.');
+    await loginPage.expectLoginPageVisible();
+    await loginPage.expectErrorMessage('Epic sadface: Sorry, this user has been locked out.');
   });
 
   test('TC_LOGIN_003 - login with invalid username and valid password', async ({ page }) => {
     const loginPage = new LoginPage(page);
     await loginPage.goto();
     await loginPage.login('invalid_user', 'secret_sauce');
-    await loginPage.expectOnLoginPage();
-    await loginPage.expectError(invalidCredentialsError);
+    await loginPage.expectLoginPageVisible();
+    await loginPage.expectErrorMessage(invalidCredentialsError);
   });
 
   test('TC_LOGIN_004 - login with valid username and invalid password', async ({ page }) => {
     const loginPage = new LoginPage(page);
     await loginPage.goto();
     await loginPage.login('standard_user', 'wrong_password');
-    await loginPage.expectOnLoginPage();
-    await loginPage.expectError(invalidCredentialsError);
+    await loginPage.expectLoginPageVisible();
+    await loginPage.expectErrorMessage(invalidCredentialsError);
   });
 
   test('TC_LOGIN_005 - login with empty username and password', async ({ page }) => {
     const loginPage = new LoginPage(page);
     await loginPage.goto();
     await loginPage.submit();
-    await loginPage.expectError('Epic sadface: Username is required');
+    await loginPage.expectErrorMessage('Epic sadface: Username is required');
   });
 
   test('TC_LOGIN_006 - login with username only', async ({ page }) => {
@@ -49,7 +49,7 @@ test.describe('SauceDemo Login', () => {
     await loginPage.goto();
     await loginPage.usernameInput.fill('standard_user');
     await loginPage.submit();
-    await loginPage.expectError('Epic sadface: Password is required');
+    await loginPage.expectErrorMessage('Epic sadface: Password is required');
   });
 
   test('TC_LOGIN_007 - login with password only', async ({ page }) => {
@@ -57,14 +57,14 @@ test.describe('SauceDemo Login', () => {
     await loginPage.goto();
     await loginPage.passwordInput.fill('secret_sauce');
     await loginPage.submit();
-    await loginPage.expectError('Epic sadface: Username is required');
+    await loginPage.expectErrorMessage('Epic sadface: Username is required');
   });
 
   test('TC_LOGIN_008 - dismiss login error message', async ({ page }) => {
     const loginPage = new LoginPage(page);
     await loginPage.goto();
     await loginPage.submit();
-    await loginPage.expectError('Epic sadface: Username is required');
+    await loginPage.expectErrorMessage('Epic sadface: Username is required');
     await loginPage.dismissError();
     await loginPage.expectErrorDismissed();
   });
@@ -73,8 +73,8 @@ test.describe('SauceDemo Login', () => {
     const loginPage = new LoginPage(page);
     await loginPage.goto();
     await loginPage.login(' standard_user ', 'secret_sauce');
-    await loginPage.expectOnLoginPage();
-    await loginPage.expectError(invalidCredentialsError);
+    await loginPage.expectLoginPageVisible();
+    await loginPage.expectErrorMessage(invalidCredentialsError);
   });
 
   test('TC_LOGIN_010 - verify session persistence after page refresh', async ({ page }) => {
@@ -90,8 +90,8 @@ test.describe('SauceDemo Login', () => {
   test('TC_LOGIN_011 - access inventory page without authentication', async ({ page }) => {
     const loginPage = new LoginPage(page);
     await loginPage.gotoPath('inventory.html');
-    await loginPage.expectOnLoginPage();
-    await loginPage.expectErrorContaining('You can only access');
+    await loginPage.expectLoginPageVisible();
+    await loginPage.expectErrorMessage('You can only access');
   });
 
   test('TC_LOGIN_012 - logout from application', async ({ page }) => {
@@ -101,6 +101,6 @@ test.describe('SauceDemo Login', () => {
     await loginPage.login('standard_user', 'secret_sauce');
     await inventoryPage.expectLoaded();
     await inventoryPage.logout();
-    await loginPage.expectOnLoginPage();
+    await loginPage.expectLoginPageVisible();
   });
 });

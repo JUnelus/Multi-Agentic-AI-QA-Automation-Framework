@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "generated/specs/**/*.ts",
+    "generated/page-objects/**/*.ts",
+    "tests/fixtures/generated/**/*.ts"
+  ],
+  "exclude": []
+}

@@ -66,4 +66,6 @@ export class CheckoutOverviewPage {
     }
     await expect(this.cartBadge).toHaveText(String(count));
   }
+  async expectItem(name: string, price?: string) { const item=this.overviewItems.filter({hasText:name}); await expect(item).toBeVisible(); if (price) await expect(item.locator('[data-test="inventory-item-price"]')).toHaveText(price); }
+
 }

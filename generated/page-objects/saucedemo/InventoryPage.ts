@@ -133,4 +133,6 @@ export class InventoryPage {
       await expect(images.nth(index)).toHaveAttribute('alt', /.+/);
     }
   }
+  async expectProductListDetails() { await this.expectLoaded(); for (const item of await this.inventoryItems.all()) { await expect(item.locator('[data-test="inventory-item-name"]')).not.toBeEmpty(); await expect(item.locator('[data-test="inventory-item-desc"]')).not.toBeEmpty(); await expect(item.locator('[data-test="inventory-item-price"]')).toContainText('$'); await expect(item.locator('img')).toBeVisible(); } }
+
 }

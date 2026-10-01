@@ -66,4 +66,8 @@ export class CartPage {
   async checkout(): Promise<void> {
     await this.checkoutButton.click();
   }
+  async expectItem(name: string, price?: string) { const item = this.itemByName(name); await expect(item).toBeVisible(); if (price) await expect(item.locator('[data-test="inventory-item-price"]')).toHaveText(price); }
+  async expectItemRemoved(name: string) { await expect(this.itemByName(name)).toHaveCount(0); }
+  async expectAllItemQuantitiesAreOne() { const quantities=this.cartItems.locator('[data-test="item-quantity"]'); expect(await quantities.count()).toBeGreaterThan(0); for (const quantity of await quantities.all()) await expect(quantity).toHaveText('1'); }
+
 }

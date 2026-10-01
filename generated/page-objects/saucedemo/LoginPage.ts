@@ -58,4 +58,7 @@ export class LoginPage {
     await expect(this.passwordInput).toHaveAttribute('placeholder', /Password/i);
     await expect(this.loginButton).toHaveValue(/Login/i);
   }
+  async expectErrorDismissed() { await expect(this.errorMessage).toBeHidden(); }
+  async expectLoginErrorStyling() { await expect(this.page.locator('.error-message-container.error')).toBeVisible(); await expect(this.usernameInput).toHaveClass(/input_error/); await expect(this.passwordInput).toHaveClass(/input_error/); }
+
 }

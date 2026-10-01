@@ -1,12 +1,12 @@
 import { test, expect, Page } from '@playwright/test';
-import { LoginPage } from '../pageObjects/LoginPage';
-import { InventoryPage } from '../pageObjects/InventoryPage';
-import { ProductDetailsPage } from '../pageObjects/ProductDetailsPage';
-import { CartPage } from '../pageObjects/CartPage';
-import { CheckoutPage } from '../pageObjects/CheckoutPage';
-import { CheckoutOverviewPage } from '../pageObjects/CheckoutOverviewPage';
-import { CheckoutCompletePage } from '../pageObjects/CheckoutCompletePage';
-import { AccessibilityScan } from '../pageObjects/AccessibilityScan';
+import { LoginPage } from '../../page-objects/saucedemo/LoginPage';
+import { InventoryPage } from '../../page-objects/saucedemo/InventoryPage';
+import { ProductDetailsPage } from '../../page-objects/saucedemo/ProductDetailsPage';
+import { CartPage } from '../../page-objects/saucedemo/CartPage';
+import { CheckoutPage } from '../../page-objects/saucedemo/CheckoutPage';
+import { CheckoutOverviewPage } from '../../page-objects/saucedemo/CheckoutOverviewPage';
+import { CheckoutCompletePage } from '../../page-objects/saucedemo/CheckoutCompletePage';
+import { AccessibilityScan } from '../../page-objects/saucedemo/AccessibilityScan';
 
 const validUser = 'standard_user';
 const validPassword = 'secret_sauce';

@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
-import { LoginPage } from '../pageObjects/LoginPage';
-import { InventoryPage } from '../pageObjects/InventoryPage';
-import { ProductDetailsPage } from '../pageObjects/ProductDetailsPage';
+import { LoginPage } from '../../page-objects/saucedemo/LoginPage';
+import { InventoryPage } from '../../page-objects/saucedemo/InventoryPage';
+import { ProductDetailsPage } from '../../page-objects/saucedemo/ProductDetailsPage';
 
 const products = ['Sauce Labs Backpack', 'Sauce Labs Bike Light', 'Sauce Labs Bolt T-Shirt'];
 
@@ -22,16 +22,16 @@ test.describe('SauceDemo Inventory', () => {
     const inventoryPage = new InventoryPage(page);
     await inventoryPage.addProduct('Sauce Labs Backpack');
     await inventoryPage.expectProductButton('Sauce Labs Backpack', 'Remove');
-    await inventoryPage.expectCartBadge(1);
+    await inventoryPage.expectCartBadgeCount(1);
   });
 
   test('TC_INV_003 - remove a product from inventory page', async ({ page }) => {
     const inventoryPage = new InventoryPage(page);
     await inventoryPage.addProduct('Sauce Labs Backpack');
-    await inventoryPage.expectCartBadge(1);
+    await inventoryPage.expectCartBadgeCount(1);
     await inventoryPage.removeProduct('Sauce Labs Backpack');
     await inventoryPage.expectProductButton('Sauce Labs Backpack', 'Add to cart');
-    await inventoryPage.expectCartBadgeHidden();
+    await inventoryPage.expectCartBadgeCount(0);
   });
 
   test('TC_INV_004 - add multiple products to cart', async ({ page }) => {
@@ -40,65 +40,65 @@ test.describe('SauceDemo Inventory', () => {
       await inventoryPage.addProduct(product);
       await inventoryPage.expectProductButton(product, 'Remove');
     }
-    await inventoryPage.expectCartBadge(3);
+    await inventoryPage.expectCartBadgeCount(3);
   });
 
   test('TC_INV_005 - open product details page from product name', async ({ page }) => {
     const inventoryPage = new InventoryPage(page);
     const productDetailsPage = new ProductDetailsPage(page);
-    await inventoryPage.openProduct('Sauce Labs Backpack');
-    await productDetailsPage.expectLoadedFor('Sauce Labs Backpack');
+    await inventoryPage.openProductDetails('Sauce Labs Backpack');
+    await productDetailsPage.expectLoadedForProduct('Sauce Labs Backpack');
   });
 
   test('TC_INV_006 - return to inventory from product details page', async ({ page }) => {
     const inventoryPage = new InventoryPage(page);
     const productDetailsPage = new ProductDetailsPage(page);
-    await inventoryPage.openProduct('Sauce Labs Backpack');
-    await productDetailsPage.expectLoadedFor('Sauce Labs Backpack');
+    await inventoryPage.openProductDetails('Sauce Labs Backpack');
+    await productDetailsPage.expectLoadedForProduct('Sauce Labs Backpack');
     await productDetailsPage.backToProducts();
     await inventoryPage.expectLoaded();
   });
 
   test('TC_INV_007 - sort products by name ascending', async ({ page }) => {
     const inventoryPage = new InventoryPage(page);
-    await inventoryPage.sortBy('az');
+    await inventoryPage.selectSort('az');
     const names = await inventoryPage.getProductNames();
     expect(names).toEqual([...names].sort());
   });
 
   test('TC_INV_008 - sort products by name descending', async ({ page }) => {
     const inventoryPage = new InventoryPage(page);
-    await inventoryPage.sortBy('za');
+    await inventoryPage.selectSort('za');
     const names = await inventoryPage.getProductNames();
     expect(names).toEqual([...names].sort().reverse());
   });
 
   test('TC_INV_009 - sort products by price low to high', async ({ page }) => {
     const inventoryPage = new InventoryPage(page);
-    await inventoryPage.sortBy('lohi');
+    await inventoryPage.selectSort('lohi');
     const prices = await inventoryPage.getProductPrices();
     expect(prices).toEqual([...prices].sort((a, b) => a - b));
   });
 
   test('TC_INV_010 - sort products by price high to low', async ({ page }) => {
     const inventoryPage = new InventoryPage(page);
-    await inventoryPage.sortBy('hilo');
+    await inventoryPage.selectSort('hilo');
     const prices = await inventoryPage.getProductPrices();
     expect(prices).toEqual([...prices].sort((a, b) => b - a));
   });
 
   test('TC_INV_011 - verify cart badge is not shown when cart is empty', async ({ page }) => {
-    await new InventoryPage(page).expectCartBadgeHidden();
+    await new InventoryPage(page).expectCartBadgeCount(0);
   });
 
   test('TC_INV_012 - verify selected cart items persist after page refresh', async ({ page }) => {
     const inventoryPage = new InventoryPage(page);
     await inventoryPage.addProduct('Sauce Labs Backpack');
     await inventoryPage.addProduct('Sauce Labs Bike Light');
-    await inventoryPage.expectCartBadge(2);
+    await inventoryPage.expectCartBadgeCount(2);
     await page.reload();
     await inventoryPage.expectLoaded();
-    await inventoryPage.expectCartBadge(2);
+    await inventoryPage.expectCartBadgeCount(2);
     await inventoryPage.expectProductButton('Sauce Labs Backpack', 'Remove');
     await inventoryPage.expectProductButton('Sauce Labs Bike Light', 'Remove');
   });

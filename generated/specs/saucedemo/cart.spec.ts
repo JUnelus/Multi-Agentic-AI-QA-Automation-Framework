@@ -1,8 +1,8 @@
 import { test } from '@playwright/test';
-import { LoginPage } from '../pageObjects/LoginPage';
-import { InventoryPage } from '../pageObjects/InventoryPage';
-import { CartPage } from '../pageObjects/CartPage';
-import { CheckoutPage } from '../pageObjects/CheckoutPage';
+import { LoginPage } from '../../page-objects/saucedemo/LoginPage';
+import { InventoryPage } from '../../page-objects/saucedemo/InventoryPage';
+import { CartPage } from '../../page-objects/saucedemo/CartPage';
+import { CheckoutPage } from '../../page-objects/saucedemo/CheckoutPage';
 
 async function loginAndOpenInventory(page: import('@playwright/test').Page): Promise<InventoryPage> {
   const loginPage = new LoginPage(page);
@@ -38,7 +38,7 @@ test.describe('SauceDemo Cart', () => {
     await cartPage.expectItem('Sauce Labs Backpack');
     await cartPage.removeProduct('Sauce Labs Backpack');
     await cartPage.expectItemRemoved('Sauce Labs Backpack');
-    await cartPage.expectCartBadgeHidden();
+    await cartPage.expectCartBadgeCount(0);
   });
 
   test('TC_CART_004 - continue shopping from cart', async ({ page }) => {
