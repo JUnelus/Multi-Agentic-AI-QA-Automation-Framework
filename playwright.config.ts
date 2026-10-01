@@ -4,9 +4,6 @@ import { loadAppConfig } from './shared/utils/app-config';
 
 dotenv.config({ quiet: true });
 
-const targetApp = process.env.TARGET_APP || 'saucedemo';
-const appConfig = loadAppConfig(targetApp);
-
 export default defineConfig({
   testDir: './apps',
   timeout: 30_000,
@@ -17,17 +14,16 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   reporter: [['html'], ['list']],
   use: {
-    baseURL: appConfig.baseUrl,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure'
   },
-  projects: [
-    {
-      name: 'chromium',
-      use: { ...devices['Desktop Chrome'] }
-    }
-  ]
+  forbidOnly: true,
+  projects: ['saucedemo', 'uitestingplayground'].map(app => ({
+    name: app,
+    testDir: `./apps/${app}/tests`,
+    use: { ...devices['Desktop Chrome'], baseURL: loadAppConfig(app).baseUrl }
+  }))
 });
 
 

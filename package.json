@@ -9,13 +9,15 @@
     "agent:generate-testcases": "ts-node agents/agent1-testcase-creator.ts",
     "agent:generate-scripts": "ts-node agents/agent2-script-generator.ts",
     "agent:run": "npm run agent:generate-testcases && npm run agent:generate-scripts",
-    "test:saucedemo": "playwright test apps/saucedemo/tests",
+    "test:saucedemo": "playwright test --project=saucedemo",
     "typecheck": "tsc --noEmit",
     "test:framework": "tsx --test tests/framework/*.spec.ts",
     "typecheck:generated": "tsc --noEmit -p tsconfig.generated.json",
     "test:generated:list": "playwright test -c playwright.generated.config.ts --list",
     "test:generated": "playwright test -c playwright.generated.config.ts",
-    "validate:generated": "npm run typecheck:generated && npm run test:generated:list"
+    "validate:generated": "npm run typecheck:generated && npm run test:generated:list",
+    "test:uitestingplayground": "playwright test --project=uitestingplayground --pass-with-no-tests",
+    "test:generated:fixture": "playwright test -c playwright.generated.config.ts --project=generated-fixture"
   },
   "repository": {
     "type": "git",
