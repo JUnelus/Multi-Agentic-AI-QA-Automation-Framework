@@ -17,7 +17,8 @@
     "test:generated": "playwright test -c playwright.generated.config.ts",
     "validate:generated": "npm run typecheck:generated && npm run test:generated:list",
     "test:uitestingplayground": "playwright test --project=uitestingplayground --pass-with-no-tests",
-    "test:generated:fixture": "playwright test -c playwright.generated.config.ts --project=generated-fixture"
+    "test:generated:fixture": "playwright test -c playwright.generated.config.ts --project=generated-fixture",
+    "agent:explore": "tsx agents/agent0-application-explorer.ts"
   },
   "repository": {
     "type": "git",

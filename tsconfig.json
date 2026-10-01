@@ -4,7 +4,8 @@
     "module": "Node16",
     "moduleResolution": "Node16",
     "lib": [
-      "ES2022"
+      "ES2022",
+      "DOM"
     ],
     "types": [
       "node",
@@ -22,6 +23,7 @@
     "apps/**/*.ts",
     "shared/**/*.ts",
     "playwright.config.ts",
-    "tests/framework/**/*.ts"
+    "tests/framework/**/*.ts",
+    "playwright.generated.config.ts"
   ]
 }
