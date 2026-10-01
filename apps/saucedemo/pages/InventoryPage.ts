@@ -13,6 +13,10 @@ export class InventoryPage {
 
   async openCart() {
     await this.page.locator('[data-test="shopping-cart-link"]').click();
+    // The cart is a client-side route; wait for it to replace the inventory
+    // list before callers assert on cart items.
+    await expect(this.page).toHaveURL(/\/cart\.html$/);
+    await expect(this.page.locator('[data-test="cart-list"]')).toBeVisible();
   }
 }
 
