@@ -4,11 +4,11 @@ A TypeScript QA pipeline that turns observed application evidence and reviewed t
 
 ## Implementation status
 
-| Status | Capabilities |
-| --- | --- |
-| IMPLEMENTED | Zod contracts; bounded browser evidence; canonical JSON and Excel export; approval filtering; safe staging; generated compilation, discovery and execution; immutable promotion; manifests; fixture mode; app-specific projects; CI |
-| EXPERIMENTAL | Live model generation; heuristic failure classification; automatic import-path repair; legacy generated SauceDemo scenarios |
-| PLANNED | Reviewed semantic/selector repairs; authenticated exploration actions; distributed scheduling; sharding; comprehensive multi-browser and accessibility coverage |
+| Status       | Capabilities                                                                                                                                                                                                                        |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| IMPLEMENTED  | Zod contracts; bounded browser evidence; canonical JSON and Excel export; approval filtering; safe staging; generated compilation, discovery and execution; immutable promotion; manifests; fixture mode; app-specific projects; CI |
+| EXPERIMENTAL | Live model generation; heuristic failure classification; automatic import-path repair; legacy generated SauceDemo scenarios                                                                                                         |
+| PLANNED      | Reviewed semantic/selector repairs; authenticated exploration actions; distributed scheduling; sharding; comprehensive multi-browser and accessibility coverage                                                                     |
 
 The committed generated login baseline and five curated SauceDemo tests are acceptance checks. The larger legacy generated suite compiles and is discoverable, but is not an approved behavioral baseline.
 
@@ -96,22 +96,22 @@ The baseline verifies successful login, the inventory URL, visible inventory, an
 
 ## Commands
 
-| Command | Purpose |
-| --- | --- |
-| `npm run typecheck` | Framework and curated TypeScript |
-| `npm run test:framework` | Deterministic framework tests |
-| `npm run test:saucedemo` | Five curated SauceDemo tests |
-| `npm run test:uitestingplayground` | Curated Playground project; currently empty |
-| `npm run typecheck:generated` | Committed generated fixtures and legacy artifacts |
-| `npm run test:generated:list` | Generated discovery |
-| `npm run test:generated:fixture` | Known-good SauceDemo login |
-| `npm run test:generated` | Generated fixture and experimental legacy suite |
-| `npm run validate:generated` | Generated compilation and discovery |
-| `npm run agent:explore -- RUN_DIRECTORY` | Standalone bounded exploration |
-| `npm run agent:generate-testcases -- EXPLORATION_JSON` | Generate draft JSON and Excel beside evidence |
-| `npm run agent:generate-scripts -- CASES_JSON` | Generate validated automation JSON for review |
-| `npm run agent:validate-repair -- STAGING_DIRECTORY` | Standalone validation and import repair, no promotion |
-| `npm run pipeline:uitestingplayground -- --no-ai` | Playground text-input baseline pipeline |
+| Command                                                | Purpose                                               |
+| ------------------------------------------------------ | ----------------------------------------------------- |
+| `npm run typecheck`                                    | Framework and curated TypeScript                      |
+| `npm run test:framework`                               | Deterministic framework tests                         |
+| `npm run test:saucedemo`                               | Five curated SauceDemo tests                          |
+| `npm run test:uitestingplayground`                     | Curated Playground project; currently empty           |
+| `npm run typecheck:generated`                          | Committed generated fixtures and legacy artifacts     |
+| `npm run test:generated:list`                          | Generated discovery                                   |
+| `npm run test:generated:fixture`                       | Known-good SauceDemo login                            |
+| `npm run test:generated`                               | Generated fixture and experimental legacy suite       |
+| `npm run validate:generated`                           | Generated compilation and discovery                   |
+| `npm run agent:explore -- RUN_DIRECTORY`               | Standalone bounded exploration                        |
+| `npm run agent:generate-testcases -- EXPLORATION_JSON` | Generate draft JSON and Excel beside evidence         |
+| `npm run agent:generate-scripts -- CASES_JSON`         | Generate validated automation JSON for review         |
+| `npm run agent:validate-repair -- STAGING_DIRECTORY`   | Standalone validation and import repair, no promotion |
+| `npm run pipeline:uitestingplayground -- --no-ai`      | Playground text-input baseline pipeline               |
 
 Orchestrator flags: `--explore-only`, `--generate-cases-only`, `--generate-code-only --cases FILE`, `--validate-only --cases FILE --code-dir DIR`, `--no-ai`, `--max-repairs 0..3`, `--requirements FILE`, `--exploration FILE`, and `--demo-approve-drafts`. Select at most one partial mode. Code-generation mode skips case generation but still validates the generated code. Validate-only copies supplied code into a new run before validation.
 
@@ -150,9 +150,22 @@ Example manifest excerpt (full schema: `shared/schemas/run-manifest.schema.ts`):
   "runId": "saucedemo-example",
   "application": "saucedemo",
   "model": "fixture",
-  "promptVersions": {"testcase-creator": "<sha256>", "script-generator": "<sha256>"},
-  "inputHashes": {"appConfig": "<sha256>", "exploration": "<sha256>", "testCases": "<sha256>"},
-  "counts": {"generatedTests": 1, "approvedTests": 1, "automationReady": 1, "specs": 1, "pageObjects": 1}
+  "promptVersions": {
+    "testcase-creator": "<sha256>",
+    "script-generator": "<sha256>"
+  },
+  "inputHashes": {
+    "appConfig": "<sha256>",
+    "exploration": "<sha256>",
+    "testCases": "<sha256>"
+  },
+  "counts": {
+    "generatedTests": 1,
+    "approvedTests": 1,
+    "automationReady": 1,
+    "specs": 1,
+    "pageObjects": 1
+  }
 }
 ```
 
@@ -161,9 +174,17 @@ Example validation-report excerpt:
 ```json
 {
   "runId": "saucedemo-example",
-  "typecheck": {"status": "passed", "diagnostics": "", "durationMs": 700},
-  "discovery": {"status": "passed", "diagnostics": "1 test", "durationMs": 500},
-  "execution": {"status": "passed", "diagnostics": "1 passed", "durationMs": 1500},
+  "typecheck": { "status": "passed", "diagnostics": "", "durationMs": 700 },
+  "discovery": {
+    "status": "passed",
+    "diagnostics": "1 test",
+    "durationMs": 500
+  },
+  "execution": {
+    "status": "passed",
+    "diagnostics": "1 passed",
+    "durationMs": 1500
+  },
   "repairAttempts": 0,
   "defectCandidates": [],
   "finalResult": "passed",
@@ -199,4 +220,3 @@ The manual **Manual agentic pipeline** workflow offers no-AI, draft-case generat
 ## Documentation and next milestones
 
 See [architecture](docs/architecture.md), [agent design](docs/agent-design.md), [data contracts](docs/data-contracts.md), [quality gates](docs/generated-code-quality-gates.md), [repair loop](docs/execution-and-repair-loop.md), [adding an application](docs/adding-a-new-application.md), and [roadmap](docs/roadmap.md).
-

@@ -21,4 +21,3 @@ App config validates URLs, names, output hints, credentials and exploration limi
 Generated code contains nonempty pageObjects/specFiles arrays, flat filenames, nonempty source and case-insensitively unique names.
 
 Exploration contains pages, observations, screenshots and stop-limit metadata. Validation reports contain gate statuses, diagnostics, failure classification, repairs and final result. Manifests contain model, prompt/input hashes, counts, artifact paths and optional usage.
-

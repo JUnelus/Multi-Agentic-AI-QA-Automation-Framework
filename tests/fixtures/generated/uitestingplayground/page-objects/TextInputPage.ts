@@ -10,4 +10,3 @@ export class TextInputPage {
     await expect(this.page.locator('#updatingButton')).toHaveText(name);
   }
 }
-

@@ -27,4 +27,3 @@
 - Distributed run queue, sharding, multi-browser projects.
 - Full Playground scenarios and richer reporting.
 - Excel review import with schema and reviewer validation.
-

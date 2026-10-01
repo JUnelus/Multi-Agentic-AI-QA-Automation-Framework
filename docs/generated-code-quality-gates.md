@@ -14,4 +14,3 @@
 `playwright.generated.config.ts` has explicit fixture/legacy projects for developer use and a selected staging project for pipeline validation. CI executes the approved login fixture; the legacy suite remains experimental.
 
 A passing compiler cannot prove correct business assertions. Review generated test intent against the approved case.
-

@@ -3,14 +3,8 @@
     "target": "ES2022",
     "module": "Node16",
     "moduleResolution": "Node16",
-    "lib": [
-      "ES2022",
-      "DOM"
-    ],
-    "types": [
-      "node",
-      "@playwright/test"
-    ],
+    "lib": ["ES2022", "DOM"],
+    "types": ["node", "@playwright/test"],
     "resolveJsonModule": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,

@@ -17,4 +17,3 @@ The orchestrator in `agents/orchestrator.ts` owns run state. Agent 0 collects ev
 Curated projects bind app URL and test directory together. Generated validation selects one app and one staging directory through an internal child environment. The child receives a small environment allowlist without the API key.
 
 The code audit is a quality filter, not an adversarial sandbox. Use disposable CI workers for unfamiliar generated output. General code execution isolation is planned.
-

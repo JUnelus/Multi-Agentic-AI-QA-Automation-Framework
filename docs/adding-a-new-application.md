@@ -10,4 +10,3 @@
 8. Verify compilation, discovery and one stable execution baseline.
 
 Do not copy SauceDemo credentials or selectors into another app. The orchestrator and generated validator load app configuration dynamically. Add a package script and manual-workflow app choice if desired.
-

@@ -19,4 +19,3 @@ Deterministic implementation. Compilation, discovery and execution produce diagn
 ## Models and testing
 
 The model function is injected. Tests use committed payloads and mock responses; production constructs the OpenAI client lazily. Optional token usage is accumulated in the manifest.
-

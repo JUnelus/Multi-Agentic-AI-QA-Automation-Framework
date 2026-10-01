@@ -9,4 +9,3 @@ The repair loop allows 0 to 3 attempts and stores each under `repair/attempt-N`.
 Each candidate is revalidated. The final report retains initial typecheck status, attempt count, defect candidates, final gates and artifact hash. Failed runs never promote.
 
 Broad semantic repair, selector replacements, helper-method edits, and model-generated patches are planned. They require evidence and a mechanism that proves approved expectations remain intact.
-

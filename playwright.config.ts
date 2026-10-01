@@ -19,11 +19,9 @@ export default defineConfig({
     video: 'retain-on-failure'
   },
   forbidOnly: true,
-  projects: ['saucedemo', 'uitestingplayground'].map(app => ({
+  projects: ['saucedemo', 'uitestingplayground'].map((app) => ({
     name: app,
     testDir: `./apps/${app}/tests`,
     use: { ...devices['Desktop Chrome'], baseURL: loadAppConfig(app).baseUrl }
   }))
 });
-
-

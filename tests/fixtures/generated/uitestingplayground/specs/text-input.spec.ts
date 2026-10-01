@@ -5,4 +5,3 @@ test('TC_TEXT_001 button name updates from input', async ({ page }) => {
   await input.renameButton('QA verified');
   await input.expectButtonName('QA verified');
 });
-

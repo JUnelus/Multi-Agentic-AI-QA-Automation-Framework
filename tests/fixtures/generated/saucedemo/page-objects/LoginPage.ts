@@ -9,8 +9,11 @@ export class LoginPage {
   }
   async expectInventory() {
     await expect(this.page).toHaveURL(/\/inventory\.html$/);
-    await expect(this.page.locator('[data-test="inventory-container"]')).toBeVisible();
-    await expect(this.page.locator('[data-test="title"]')).toHaveText('Products');
+    await expect(
+      this.page.locator('[data-test="inventory-container"]')
+    ).toBeVisible();
+    await expect(this.page.locator('[data-test="title"]')).toHaveText(
+      'Products'
+    );
   }
 }
-

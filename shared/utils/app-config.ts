@@ -4,5 +4,12 @@ import { appConfigSchema, appIdSchema } from '../schemas/app-config.schema';
 export type { AppConfig } from '../schemas/app-config.schema';
 export function loadAppConfig(appName: string) {
   appIdSchema.parse(appName);
-  return appConfigSchema.parse(JSON.parse(fs.readFileSync(path.join(process.cwd(), 'apps', appName, 'config.json'), 'utf8')));
+  return appConfigSchema.parse(
+    JSON.parse(
+      fs.readFileSync(
+        path.join(process.cwd(), 'apps', appName, 'config.json'),
+        'utf8'
+      )
+    )
+  );
 }

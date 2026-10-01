@@ -6,9 +6,7 @@
     "scenario": "Standard user reaches inventory",
     "testType": "positive",
     "priority": "high",
-    "preconditions": [
-      "Public SauceDemo demo credentials are available"
-    ],
+    "preconditions": ["Public SauceDemo demo credentials are available"],
     "steps": [
       {
         "stepNumber": 1,
@@ -30,4 +28,3 @@
     "pageObject": "LoginPage"
   }
 ]
-

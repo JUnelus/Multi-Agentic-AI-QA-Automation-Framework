@@ -35,4 +35,3 @@ jobs:
             test-results/
             generated/runs/
           retention-days: 14
-
