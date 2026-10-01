@@ -32,7 +32,9 @@ export async function exportTestCases(cases: TestCase[], directory: string) {
   );
   const workbook = new ExcelJS.Workbook();
   const sheet = workbook.addWorksheet('Test Cases');
-  const keys = Object.keys(validated[0]) as (keyof TestCase)[];
+  const keys = Array.from(
+    new Set(validated.flatMap((c) => Object.keys(c)))
+  ) as (keyof TestCase)[];
   // All schema fields are represented even when absent from the first case.
   const columns = Array.from(
     new Set([

@@ -11,6 +11,12 @@ export function classifyFailure(
     return 'ENVIRONMENT_ERROR';
   if (stage === 'schema') return 'GENERATOR_ERROR';
   if (stage === 'execution') {
+    if (
+      /Generated origin isolation|Generated execution blocks|No executable assertion|Missing executed assertion|Every test must execute at least one successful assertion/i.test(
+        diagnostic
+      )
+    )
+      return 'GENERATOR_ERROR';
     // An assertion mismatch against approved behavior is never a repair invitation.
     if (/expect\(|toHave|toBe|assertion|expected:|received:/i.test(diagnostic))
       return 'POSSIBLE_PRODUCT_DEFECT';

@@ -105,6 +105,7 @@ test('syntactically present but unexecuted assertions cannot certify a case', as
       /execute at least one successful assertion/
     );
     assert.equal(report.finalResult, 'failed');
+    assert.equal(report.category, 'GENERATOR_ERROR');
   } finally {
     fs.rmSync(directory, { recursive: true, force: true });
   }

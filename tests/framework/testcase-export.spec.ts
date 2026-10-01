@@ -66,3 +66,36 @@ test('only approved feasible cases selected; demo override never admits rejected
     /No approved/
   );
 });
+
+test('Excel retains provenance fields that occur only on later cases', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-columns-'));
+  try {
+    const mixed = [
+      cases[0],
+      {
+        ...cases[0],
+        testCaseId: 'CASE-2',
+        application: 'saucedemo',
+        explorationHash: 'a'.repeat(64)
+      }
+    ];
+    await exportTestCases(mixed, dir);
+    const book = new ExcelJS.Workbook();
+    await book.xlsx.readFile(path.join(dir, 'test-cases.xlsx'));
+    const sheet = book.getWorksheet('Test Cases')!;
+    const columns = new Map<string, number>();
+    sheet.getRow(1).eachCell((cell, col) => {
+      columns.set(String(cell.value), col);
+    });
+    assert.equal(
+      sheet.getCell(3, columns.get('application')!).value,
+      'saucedemo'
+    );
+    assert.equal(
+      sheet.getCell(3, columns.get('explorationHash')!).value,
+      'a'.repeat(64)
+    );
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});

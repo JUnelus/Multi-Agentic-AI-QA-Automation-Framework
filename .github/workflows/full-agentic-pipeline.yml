@@ -14,6 +14,14 @@ on:
         description: Repository-relative reviewed canonical JSON (approved-cases mode)
         type: string
         default: ''
+      exploration:
+        description: Repository-relative exploration JSON with sibling screenshots
+        type: string
+        default: ''
+      requirements:
+        description: Repository-relative requirements text referenced by reviewed cases
+        type: string
+        default: ''
 permissions:
   contents: read
 jobs:
@@ -24,6 +32,8 @@ jobs:
       QA_APP_INPUT: ${{ inputs.app }}
       QA_MODE_INPUT: ${{ inputs.mode }}
       QA_CASES_INPUT: ${{ inputs.cases }}
+      QA_EXPLORATION_INPUT: ${{ inputs.exploration }}
+      QA_REQUIREMENTS_INPUT: ${{ inputs.requirements }}
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -46,7 +56,12 @@ jobs:
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_MODEL: ${{ vars.OPENAI_MODEL || 'gpt-5.5' }}
-        run: npx tsx agents/orchestrator.ts --app "$QA_APP_INPUT" --cases "$QA_CASES_INPUT"
+        shell: bash
+        run: |
+          args=(--app "$QA_APP_INPUT" --cases "$QA_CASES_INPUT")
+          if [[ -n "$QA_EXPLORATION_INPUT" ]]; then args+=(--exploration "$QA_EXPLORATION_INPUT"); fi
+          if [[ -n "$QA_REQUIREMENTS_INPUT" ]]; then args+=(--requirements "$QA_REQUIREMENTS_INPUT"); fi
+          npx tsx agents/orchestrator.ts "${args[@]}"
       - uses: actions/upload-artifact@v6
         if: always()
         with:
