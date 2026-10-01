@@ -1,3 +1,6 @@
+import { readTestCases, selectTestCases } from '../shared/utils/testcases';
+import { validateProvenance } from '../shared/exploration/evidence';
+import { loadAppConfig } from '../shared/utils/app-config';
 import fs from 'node:fs';
 import path from 'node:path';
 import { readCode } from '../shared/validation/code-contract';
@@ -11,6 +14,22 @@ export async function validateAndRepair(
   maxRepairs = 3
 ) {
   const runId = path.basename(runDirectory);
+  const cases = readTestCases(path.join(runDirectory, 'test-cases.json'));
+  const evidenceFile = path.join(runDirectory, 'exploration.json');
+  validateProvenance(
+    cases,
+    fs.existsSync(evidenceFile)
+      ? JSON.parse(fs.readFileSync(evidenceFile, 'utf8'))
+      : undefined,
+    {
+      app,
+      config: loadAppConfig(app),
+      requirements: fs.existsSync(path.join(runDirectory, 'requirements.txt'))
+        ? fs.readFileSync(path.join(runDirectory, 'requirements.txt'), 'utf8')
+        : undefined
+    }
+  );
+  const selected = selectTestCases(cases);
   const result = await repairLoop({
     code: readCode(directory),
     directory,
@@ -21,7 +40,8 @@ export async function validateAndRepair(
         runId,
         app,
         dir,
-        path.join(runDirectory, 'reports', 'attempt-' + attempt)
+        path.join(runDirectory, 'reports', 'attempt-' + attempt),
+        selected
       )
   });
   fs.writeFileSync(

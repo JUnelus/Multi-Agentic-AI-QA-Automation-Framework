@@ -20,10 +20,12 @@
     "maxPages": 3,
     "maxInteractions": 2,
     "maxDurationMs": 30000,
-    "routes": [
-      "/dynamicid",
-      "/textinput"
-    ],
-    "allowedOrigins": []
+    "routes": ["/dynamicid", "/textinput"],
+    "allowedOrigins": [
+      "https://maxcdn.bootstrapcdn.com",
+      "https://code.jquery.com",
+      "https://cdnjs.cloudflare.com",
+      "https://buttons.github.io"
+    ]
   }
 }

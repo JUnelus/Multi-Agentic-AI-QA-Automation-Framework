@@ -4,7 +4,7 @@ import { inspectPlaywrightReport } from '../../shared/validation/playwright-repo
 import { readTestCases } from '../../shared/utils/testcases';
 const cases = readTestCases('tests/fixtures/saucedemo-test-cases.json');
 const payload = (
-  title = 'TC_LOGIN_001 login',
+  title = '[TC_LOGIN_001] login',
   status = 'passed',
   expectedStatus = 'passed'
 ) => ({
@@ -21,7 +21,7 @@ test('execution report binds approved case IDs to actual discovered titles', () 
     )
   );
   assert.ok(
-    inspectPlaywrightReport(payload('TC_LOGIN_0010 collision'), false, cases)
+    inspectPlaywrightReport(payload('[TC_LOGIN_0010] collision'), false, cases)
       .length
   );
 });

@@ -1,10 +1,11 @@
+import { GENERATED_TEST_TIMEOUT_MS } from './shared/validation/execution-budget';
 import { defineConfig, devices } from '@playwright/test';
 import path from 'node:path';
 import { loadAppConfig } from './shared/utils/app-config';
 const staging = process.env.QA_CODE_DIR;
 const app = process.env.QA_APP || 'saucedemo';
 export default defineConfig({
-  timeout: 30000,
+  timeout: GENERATED_TEST_TIMEOUT_MS,
   expect: { timeout: 5000 },
   forbidOnly: true,
   retries: 0,
@@ -26,6 +27,7 @@ export default defineConfig({
   ],
   use: {
     ...devices['Desktop Chrome'],
+    serviceWorkers: 'block',
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure'
   },

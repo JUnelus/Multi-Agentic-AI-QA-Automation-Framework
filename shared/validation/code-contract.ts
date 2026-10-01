@@ -1,3 +1,6 @@
+import { assertionContract, guardedTestModule } from './assertion-contract';
+import { assertAllowedUrl } from './origin-policy';
+import { AppConfig } from '../schemas/app-config.schema';
 import fs from 'node:fs';
 import path from 'node:path';
 import ts from 'typescript';
@@ -26,7 +29,8 @@ export function readCode(directory: string): GeneratedCode {
 }
 export function auditCode(
   code: GeneratedCode,
-  cases: TestCase[] = []
+  cases: TestCase[] = [],
+  config?: AppConfig
 ): string[] {
   const errors: string[] = [];
   const dependencies = Object.keys(
@@ -45,10 +49,37 @@ export function auditCode(
         ts.isStringLiteral(node.moduleSpecifier)
       ) {
         const name = node.moduleSpecifier.text;
+        if (
+          name === '@playwright/test' &&
+          node.importClause &&
+          !node.importClause.isTypeOnly
+        ) {
+          const bindings = node.importClause.namedBindings;
+          if (
+            node.importClause.name ||
+            !bindings ||
+            !ts.isNamedImports(bindings) ||
+            bindings.elements.some(
+              (e) =>
+                !e.isTypeOnly &&
+                ![
+                  'expect',
+                  'Page',
+                  'Locator',
+                  'BrowserContext',
+                  'APIRequestContext'
+                ].includes(e.propertyName?.text || e.name.text)
+            )
+          )
+            errors.push(
+              'Generated tests must import test from ' + guardedTestModule
+            );
+        }
         const allowedRelative =
           /^(\.\/|\.\.\/page-objects\/)[A-Za-z][A-Za-z0-9_-]*$/.test(name);
         if (!(
           allowedRelative ||
+          name === guardedTestModule ||
           (dependencies.includes(name) &&
             ['@playwright/test', '@axe-core/playwright'].includes(name))
         ))
@@ -63,13 +94,66 @@ export function auditCode(
           'Function',
           'globalThis',
           'global',
-          'fetch',
-          'XMLHttpRequest'
+          'XMLHttpRequest',
+          'WebSocket',
+          'Worker',
+          'navigator'
         ].includes(node.text)
       )
         errors.push('Unsupported runtime capability: ' + node.text);
+      if (
+        ts.isIdentifier(node) &&
+        node.text === 'fetch' &&
+        !(
+          ts.isPropertyAccessExpression(node.parent) &&
+          node.parent.name === node
+        )
+      ) {
+        let ancestor: ts.Node | undefined = node.parent;
+        while (
+          ancestor &&
+          !(
+            ts.isCallExpression(ancestor) &&
+            /\.evaluate$/.test(ancestor.expression.getText(source))
+          )
+        )
+          ancestor = ancestor.parent;
+        if (!ancestor)
+          errors.push(
+            'Node fetch is unsupported; use the guarded request fixture'
+          );
+      }
       if (ts.isCallExpression(node)) {
         const call = node.expression.getText(source);
+
+        if (
+          /\.(route|unroute|unrouteAll|routeWebSocket|newContext|newPage|newCDPSession|launch|connect|extend|configure|use)$/.test(
+            call
+          )
+        )
+          errors.push('Unsupported guard bypass capability: ' + call);
+        if (
+          config &&
+          /(^fetch$|\.(goto|fetch|get|post|put|patch|delete|head|open|sendBeacon|navigate|assign|replace)$)/.test(
+            call
+          )
+        ) {
+          const url = node.arguments[0];
+          if (
+            url &&
+            ts.isStringLiteralLike(url) &&
+            /^(https?:|\/\/)/i.test(url.text)
+          )
+            try {
+              assertAllowedUrl(
+                url.text,
+                config.baseUrl,
+                config.exploration.allowedOrigins
+              );
+            } catch (error) {
+              errors.push(String(error));
+            }
+        }
         if (
           /\.(skip|fixme|only|fail|setTimeout|waitForTimeout)$/.test(call) ||
           call === 'import' ||
@@ -91,16 +175,7 @@ export function auditCode(
     if (/@ts-(ignore|nocheck)|\bas any\b/.test(file.code))
       errors.push('Type suppression is not allowed');
   }
-  const specs = code.specFiles.map((f) => f.code).join('\n');
-  for (const c of cases)
-    if (!specs.includes(c.testCaseId))
-      errors.push('Missing approved case: ' + c.testCaseId);
-  if (
-    ![...code.pageObjects, ...code.specFiles].some((f) =>
-      /\bexpect\s*\(/.test(f.code)
-    )
-  )
-    errors.push('Generated batch has no assertions');
+  errors.push(...assertionContract(code, cases));
   return [...new Set(errors)];
 }
 export function typecheckDirectory(directory: string): string[] {

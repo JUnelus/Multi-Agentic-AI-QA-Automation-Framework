@@ -29,9 +29,9 @@ export class HeadingPage {
       specFiles: [
         {
           fileName: 'heading.spec.ts',
-          code: `import { test } from '@playwright/test';
+          code: `import { test } from 'multi-agentic-ai-qa-automation-framework/generated-test';
 import { HeadingPage } from '../page-objects/HeadingPage';
-test('TC_LOGIN_001 approved behavior', async ({ page }) => { await new HeadingPage(page).check(); });`
+test('[TC_LOGIN_001] approved behavior', async ({ page }) => { await new HeadingPage(page).check(); });`
         }
       ]
     };
@@ -74,6 +74,37 @@ test('malformed generated directory becomes a schema report, not an uncaught err
     );
     assert.equal(report.schema.status, 'failed');
     assert.equal(report.execution.status, 'not-run');
+  } finally {
+    fs.rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test('syntactically present but unexecuted assertions cannot certify a case', async () => {
+  const directory = fs.mkdtempSync(
+    path.join(process.cwd(), 'generated', 'contract-test-')
+  );
+  try {
+    const code = readCode('tests/fixtures/generated/saucedemo');
+    code.specFiles[0].code = `import {test,expect} from 'multi-agentic-ai-qa-automation-framework/generated-test';
+  test('[TC_LOGIN_001] dead assertion',async()=>{if(false) {expect(1).toBe(1);}});`;
+    const staging = path.join(directory, 'staging');
+    stageCode(code, staging);
+    const report = await validateCode(
+      'empty-runtime',
+      'saucedemo',
+      staging,
+      path.join(directory, 'reports'),
+      readTestCases('tests/fixtures/saucedemo-test-cases.json')
+    );
+    assert.equal(report.schema.status, 'passed');
+    assert.equal(report.typecheck.status, 'passed');
+    assert.equal(report.discovery.status, 'passed');
+    assert.equal(report.execution.status, 'failed');
+    assert.match(
+      report.execution.diagnostics,
+      /execute at least one successful assertion/
+    );
+    assert.equal(report.finalResult, 'failed');
   } finally {
     fs.rmSync(directory, { recursive: true, force: true });
   }

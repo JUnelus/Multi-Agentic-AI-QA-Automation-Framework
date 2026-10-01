@@ -1,0 +1,164 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { auditCode, readCode } from '../../shared/validation/code-contract';
+import { guardedTestModule } from '../../shared/validation/assertion-contract';
+import { readTestCases } from '../../shared/utils/testcases';
+import { loadAppConfig } from '../../shared/utils/app-config';
+import { inspectPlaywrightReport } from '../../shared/validation/playwright-report';
+import { executionBudget } from '../../shared/validation/execution-budget';
+const original = readTestCases('tests/fixtures/saucedemo-test-cases.json')[0];
+const cases = ['CASE-1', 'CASE-1-NEG'].map((testCaseId) => ({
+  ...original,
+  testCaseId
+}));
+const code = (body: string) => ({
+  pageObjects: readCode('tests/fixtures/generated/saucedemo').pageObjects,
+  specFiles: [
+    {
+      fileName: 'cases.spec.ts',
+      code: 'import { test, expect } from "' + guardedTestModule + '";\n' + body
+    }
+  ]
+});
+const declaration = (id: string, body: string) =>
+  'test("[' + id + '] example", async ({page})=>{' + body + '});';
+const assertion = 'await expect(page).toHaveURL("/");';
+test('each exact case needs its own invoked assertion', () => {
+  assert.deepEqual(
+    auditCode(code(declaration('CASE-1', assertion)), [cases[0]]),
+    []
+  );
+  assert.deepEqual(
+    auditCode(
+      code(cases.map((c) => declaration(c.testCaseId, assertion)).join('\n')),
+      cases
+    ),
+    []
+  );
+  for (const body of [
+    '',
+    '// expect(page).toHaveURL("/");\n',
+    'const text="expect(page).toHaveURL()";'
+  ])
+    assert.ok(
+      auditCode(
+        code(
+          declaration('CASE-1', assertion) + declaration('CASE-1-NEG', body)
+        ),
+        cases
+      ).some((e) => e.includes('No executable assertion'))
+    );
+  assert.ok(
+    auditCode(code(declaration('CASE-1-NEG', assertion)), cases).some((e) =>
+      e.includes('Missing')
+    )
+  );
+  assert.ok(
+    auditCode(code(declaration('CASE-1', assertion).repeat(2)), [
+      cases[0]
+    ]).some((e) => e.includes('Duplicate'))
+  );
+  for (const title of ['CASE-1 example', '[CASE-1]', 'unknown'])
+    assert.ok(
+      auditCode(
+        code(
+          'test(' +
+            JSON.stringify(title) +
+            ',async({page})=>{' +
+            assertion +
+            '});'
+        ),
+        [cases[0]]
+      ).some((e) => e.includes('Malformed'))
+    );
+});
+test('only invoked page-object assertion helpers count', () => {
+  const fixture = readCode('tests/fixtures/generated/saucedemo');
+  assert.deepEqual(auditCode(fixture, [original]), []);
+  fixture.specFiles[0].code = fixture.specFiles[0].code.replace(
+    'await login.expectInventory();',
+    ''
+  );
+  assert.ok(
+    auditCode(fixture, [original]).some((e) =>
+      e.includes('No executable assertion')
+    )
+  );
+});
+test('static navigation and API origins allow relative and explicit trusted origins only', () => {
+  const config = loadAppConfig('saucedemo');
+  for (const expression of [
+    'page.goto("/")',
+    'page.goto("https://www.saucedemo.com/")',
+    'page.request.get("https://www.saucedemo.com/api")'
+  ])
+    assert.deepEqual(
+      auditCode(
+        code(declaration('CASE-1', 'await ' + expression + ';' + assertion)),
+        [cases[0]],
+        config
+      ),
+      []
+    );
+  for (const expression of [
+    'page.goto("https://foreign.example/")',
+    'page.request.get("https://foreign.example/api")',
+    'fetch("https://foreign.example/")'
+  ])
+    assert.ok(
+      auditCode(
+        code(declaration('CASE-1', 'await ' + expression + ';' + assertion)),
+        [cases[0]],
+        config
+      ).some((e) => e.includes('blocked URL'))
+    );
+  config.exploration.allowedOrigins.push('https://extra.example');
+  assert.deepEqual(
+    auditCode(
+      code(
+        declaration(
+          'CASE-1',
+          'await page.goto("https://extra.example/");' + assertion
+        )
+      ),
+      [cases[0]],
+      config
+    ),
+    []
+  );
+});
+test('report binding treats CASE-1 and CASE-1-NEG independently', () => {
+  const report = (ids: string[]) => ({
+    errors: [],
+    suites: [
+      {
+        specs: ids.map((id) => ({
+          title: '[' + id + '] example',
+          tests: [{ expectedStatus: 'passed', results: [{ status: 'passed' }] }]
+        }))
+      }
+    ]
+  });
+  assert.deepEqual(
+    inspectPlaywrightReport(report(['CASE-1', 'CASE-1-NEG']), false, cases),
+    []
+  );
+  assert.ok(
+    inspectPlaywrightReport(report(['CASE-1-NEG']), false, cases).some((e) =>
+      e.includes('missing')
+    )
+  );
+  assert.ok(
+    inspectPlaywrightReport(report(['CASE-1', 'CASE-1']), false, [
+      cases[0]
+    ]).some((e) => e.includes('Duplicate'))
+  );
+});
+test('execution budget scales with case count and rejects unbounded workloads', () => {
+  assert.equal(executionBudget(1).globalTimeoutMs, 60000);
+  assert.equal(executionBudget(4).globalTimeoutMs, 150000);
+  assert.equal(executionBudget(4).processTimeoutMs, 180000);
+  for (const count of [0, -1, 1.5, 201, 30, Infinity])
+    assert.throws(() => executionBudget(count));
+  assert.throws(() => executionBudget(1, 500));
+});

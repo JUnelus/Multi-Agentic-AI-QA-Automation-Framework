@@ -1,3 +1,6 @@
+import { executionBudget } from './execution-budget';
+import { loadAppConfig } from '../utils/app-config';
+import { extractCaseId } from './test-identity';
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -61,6 +64,7 @@ function childEnvironment(
     QA_APP: app,
     QA_CODE_DIR: path.resolve(directory),
     QA_REPORT_DIR: path.resolve(reports),
+    QA_ASSERTIONS_FILE: path.resolve(reports, 'assertions.json'),
     PLAYWRIGHT_JSON_OUTPUT_FILE: path.resolve(reports, 'execution.json')
   };
 }
@@ -73,23 +77,31 @@ export function runPlaywright(
 ): Gate {
   fs.mkdirSync(reports, { recursive: true });
   const start = Date.now();
+  const budget = list
+    ? { globalTimeoutMs: 60000, processTimeoutMs: 90000 }
+    : executionBudget(cases.length || 1);
   const args = [
     require.resolve('@playwright/test/cli'),
     'test',
     '-c',
     path.resolve('playwright.generated.config.ts'),
     '--workers=1',
-    '--global-timeout=60000',
-    ...(list ? ['--list', '--reporter=json'] : ['--reporter=line,json'])
+    '--global-timeout=' + budget.globalTimeoutMs,
+    ...(list
+      ? ['--list', '--reporter=json']
+      : ['--reporter=line,json,./shared/validation/assertion-reporter.ts'])
   ];
   const result = spawnSync(process.execPath, args, {
     env: childEnvironment(app, directory, reports),
     encoding: 'utf8',
-    timeout: 90000,
+    timeout: budget.processTimeoutMs,
     maxBuffer: 4 * 1024 * 1024,
     windowsHide: true
   });
   let diagnostics =
+    'Execution budget: ' +
+    JSON.stringify(budget) +
+    '\n' +
     (result.stdout || '') +
     (result.stderr || '') +
     (result.error?.message || '');
@@ -99,6 +111,31 @@ export function runPlaywright(
     try {
       const report = JSON.parse(fs.readFileSync(jsonFile, 'utf8'));
       const errors = inspectPlaywrightReport(report, list, cases);
+      if (!list) {
+        const assertions: { title: string; count: number }[] = JSON.parse(
+          fs.readFileSync(path.join(reports, 'assertions.json'), 'utf8')
+        );
+        if (
+          !Array.isArray(assertions) ||
+          !assertions.length ||
+          assertions.some(
+            (a) =>
+              !extractCaseId(a.title) ||
+              !Number.isInteger(a.count) ||
+              a.count < 1
+          )
+        )
+          errors.push(
+            'Every test must execute at least one successful assertion in its body'
+          );
+        for (const c of cases)
+          if (
+            assertions.filter(
+              (a) => extractCaseId(a.title) === c.testCaseId && a.count > 0
+            ).length !== 1
+          )
+            errors.push('Missing executed assertion for ' + c.testCaseId);
+      }
       if (errors.length) {
         passed = false;
         diagnostics += '\n' + errors.join('\n');
@@ -137,10 +174,15 @@ export async function validateCode(
     const start = Date.now();
     try {
       if (stage === 'schema' || stage === 'typecheck') {
-        if (stage === 'schema') before = artifactHash(directory);
+        if (stage === 'schema') {
+          before = artifactHash(directory);
+          if (!cases.length)
+            throw new Error('Validation requires approved test cases');
+          executionBudget(cases.length);
+        }
         const errors =
           stage === 'schema'
-            ? auditCode(readCode(directory), cases)
+            ? auditCode(readCode(directory), cases, loadAppConfig(app))
             : typecheckDirectory(directory);
         report[stage] = {
           status: errors.length ? 'failed' : 'passed',

@@ -25,7 +25,11 @@ export async function generateScripts(
     template +
       '\nInput:\n' +
       JSON.stringify({
-        app: { appName: config.appName, baseUrl: config.baseUrl },
+        app: {
+          appName: config.appName,
+          baseUrl: config.baseUrl,
+          allowedOrigins: config.exploration.allowedOrigins
+        },
         dependencies,
         demoDrafts: allowDrafts,
         testCases: selected

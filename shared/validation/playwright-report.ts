@@ -1,3 +1,4 @@
+import { extractCaseId } from './test-identity';
 import { z } from 'zod';
 import { TestCase } from '../schemas/test-case.schema';
 const specSchema = z.object({
@@ -49,15 +50,23 @@ export function inspectPlaywrightReport(
     )
       errors.push('Skipped or non-passing test: ' + spec.title);
   }
-  const matches = (title: string, id: string) =>
-    title === id ||
-    (title.startsWith(id) && /^[\s:-]/.test(title.slice(id.length)));
+  const counts = new Map<string, number>();
+  for (const spec of specs) {
+    const id = extractCaseId(spec.title);
+    if (!id) {
+      errors.push('Malformed or missing case ID: ' + spec.title);
+      continue;
+    }
+    counts.set(id, (counts.get(id) || 0) + spec.tests.length);
+    if (cases.length && !cases.some((c) => c.testCaseId === id))
+      errors.push('Unapproved generated test: ' + id);
+  }
+  for (const [id, count] of counts)
+    if (count !== 1) errors.push('Duplicate exact case ID: ' + id);
   for (const c of cases)
-    if (!specs.some((s) => matches(s.title, c.testCaseId)))
-      errors.push('Approved case missing from report: ' + c.testCaseId);
-  if (cases.length)
-    for (const spec of specs)
-      if (!cases.some((c) => matches(spec.title, c.testCaseId)))
-        errors.push('Unapproved generated test: ' + spec.title);
+    if (counts.get(c.testCaseId) !== 1)
+      errors.push(
+        'Approved case missing or duplicated in report: ' + c.testCaseId
+      );
   return errors;
 }

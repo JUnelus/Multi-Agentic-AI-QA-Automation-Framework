@@ -14,3 +14,13 @@
 `playwright.generated.config.ts` has explicit fixture/legacy projects for developer use and a selected staging project for pipeline validation. CI executes the approved login fixture; the legacy suite remains experimental.
 
 A passing compiler cannot prove correct business assertions. Review generated test intent against the approved case.
+
+## Certification contract
+
+Every approved ID maps to exactly one title of the form `[CASE-1] descriptive title`. Static TypeScript AST analysis resolves direct local helpers and explicitly constructed page-object methods. Comments, strings, unused methods and other tests cannot supply an assertion. A trusted reporter also requires a completed successful Playwright expect step in each test body; assertions in hooks and unreachable code do not certify it. Complex unresolved helper patterns are rejected conservatively.
+
+Staged tests import `test` from `multi-agentic-ai-qa-automation-framework/generated-test`. The fixture guards browser requests (including redirected resources via Chromium CDP), browser fetch/XHR, and the provided API request contexts. Every HTTP(S) origin must equal the selected base origin or an explicit `exploration.allowedOrigins` entry. Same-origin absolute URLs are allowed. Static analysis also rejects obvious external navigation/API calls and direct Node networking. Service workers are blocked; additional pages, WebSockets, new contexts and routing overrides are unsupported. This is defense in depth, not a hostile-code sandbox.
+
+The checked-in allowlists include SauceDemo's Google Fonts and Backtrace dependencies, and Playground's Bootstrap, jQuery, Cloudflare and GitHub Buttons resources. Adding an origin explicitly trusts network access to it; no wildcard or blanket static-resource exception exists. New site dependencies fail clearly until reviewed. The experimental legacy project predates this contract and is not certified or promoted by the pipeline.
+
+Execution is serial, with 30 seconds per approved test plus 30 seconds startup, a 60-second minimum, and a 15-minute maximum. The process gets a further 30 seconds to finish reporting. Oversized batches are rejected with a split-batch diagnostic. Effective budgets are recorded in gate diagnostics. Initial, repaired and final certification reports must be terminal; unexpected pending reports are framework errors.

@@ -196,7 +196,7 @@ Full reports also track schema and initial typecheck results. Manifests include 
 
 ## Application isolation and Playground roadmap
 
-Each curated Playwright project owns its test directory and base URL. `TARGET_APP` selects standalone agent configuration; it cannot redirect all curated tests to one URL.
+Each curated Playwright project owns its test directory and base URL. Certified generated tests additionally use a browser/API origin guard with explicit configured origins, exact bracketed case IDs, and per-test static plus runtime assertion checks. `TARGET_APP` selects standalone agent configuration; it cannot redirect all curated tests to one URL.
 
 Playground has bounded routes for Dynamic ID and Text Input plus a generated text-input baseline. Planned scenarios: Class Attribute, Hidden Layers, Load Delay, AJAX Data, Client Side Delay, Click, Scrollbars, Alerts, and broader Dynamic ID coverage.
 
@@ -204,7 +204,7 @@ Playground has bounded routes for Dynamic ID and Text Input plus a generated tex
 
 PR/push CI installs Chromium, runs framework checks, curated SauceDemo tests, generated compilation/discovery, the login fixture, and the no-AI pipeline. Reports are uploaded even on failure. No OpenAI secret is required.
 
-The manual **Manual agentic pipeline** workflow offers no-AI, draft-case generation, and generation from a reviewed repository JSON file. Paid modes use the `OPENAI_API_KEY` GitHub secret. Generated drafts never silently become approved in that workflow.
+The manual **Manual agentic pipeline** workflow offers no-AI, draft-case generation, and generation from a reviewed repository JSON file. Paid modes use the `OPENAI_API_KEY` GitHub secret. Generated drafts never silently become approved in that workflow. The artifact includes both run evidence and promoted immutable versions with current.json.
 
 ## Limitations
 

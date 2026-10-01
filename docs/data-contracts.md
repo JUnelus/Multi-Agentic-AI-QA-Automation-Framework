@@ -21,3 +21,9 @@ App config validates URLs, names, output hints, credentials and exploration limi
 Generated code contains nonempty pageObjects/specFiles arrays, flat filenames, nonempty source and case-insensitively unique names.
 
 Exploration contains pages, observations, screenshots and stop-limit metadata. Validation reports contain gate statuses, diagnostics, failure classification, repairs and final result. Manifests contain model, prompt/input hashes, counts, artifact paths and optional usage.
+
+Imported exploration is validated against the application and every page origin. Screenshot references must be flat PNG files under the source artifact's screenshots directory; traversal, symlinks, missing files, invalid signatures and files over 20 MB fail import. Images are copied into the new run and references rewritten.
+
+Agent 1 and imported cases use the same provenance validator. Evidence IDs and selector mappings must exist and agree. Observed behavior needs evidence, requirement claims need supplied requirements, and inferred behavior remains labeled. Agent 1 stamps the application and a screenshot-location-independent exploration hash; supplied provenance fields must match. This checks evidence references, not the semantic truth of an arbitrary expected result.
+
+Promotion sets its approved artifact pointer before serializing either manifest. Approved versions remain immutable; current.json is replaced using a unique same-directory temporary file, fsync and native rename replacement. Node/libuv supports replacing files on Windows and Linux. Failed replacement retains the previous pointer and removes temporary files; readers never see a partially written pointer.
