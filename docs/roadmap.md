@@ -1,22 +1,30 @@
 # Roadmap
 
-## Milestone 1
+## Implemented v1
 
-- ✅ Scaffold the Playwright + TypeScript project.
-- ✅ Add SauceDemo page objects and sample smoke tests.
-- ✅ Add OpenAI-powered test case and script generation agents.
-- ✅ Add GitHub Actions workflow for Playwright execution.
+- Runtime contracts, canonical JSON and Excel review export.
+- Explicit case approval and safe immutable staging.
+- Generated compilation, discovery and execution gates.
+- App-isolated curated tests.
+- Bounded exploration with evidence and screenshots.
+- Conservative failure classification and bounded import repair.
+- Run manifests, reports, hashes and promotion.
+- No-AI SauceDemo and Playground baselines.
+- Deterministic CI and manual paid-generation workflow.
 
-## Milestone 2
+## Next: trust and broader coverage
 
-- Add curated UI Testing Playground page objects and specs.
-- Add shared fixtures for authenticated and cross-app flows.
-- Add accessibility checks into `shared/accessibility`.
-- Add richer HTML and Excel reporting.
+- Review UI and attributable approval records.
+- Disposable execution sandbox with filesystem/network restrictions.
+- Per-case assertion coverage and semantic evaluation against requirements.
+- Authenticated exploration and explicitly reviewed actions.
+- Evidence-backed selector repairs with review.
+- Resolve and review legacy accessibility/business expectations.
 
-## Milestone 3
+## Later: scale
 
-- Introduce prompt versioning and result validation.
-- Add generated code review and approval workflow.
-- Expand multi-browser coverage and sharded CI execution.
+- Batch generation with model/cost budgets and caching.
+- Distributed run queue, sharding, multi-browser projects.
+- Full Playground scenarios and richer reporting.
+- Excel review import with schema and reviewer validation.
 

@@ -1,22 +1,22 @@
-# Agent Design
+# Agent design
 
-## Agent 1: Test Case Creator
+## Agent 0: application explorer
 
-- Loads the selected application config.
-- Builds a prompt from `agents/prompts/testcase-creator.prompt.md`.
-- Requests structured JSON test cases from OpenAI.
-- Writes the output into an Excel workbook using ExcelJS.
+Uses Playwright Chromium, visits the base URL and configured routes, and records up to 500 elements per page. Page count, navigation count, total duration and allowed navigation origins are bounded. Redirects are checked; service workers are blocked. Cross-origin static resources remain available for rendering. No arbitrary click or form submission is performed.
 
-## Agent 2: Script Generator
+## Agent 1: case creator
 
-- Reads the Excel workbook produced by Agent 1.
-- Filters for automation-ready scenarios.
-- Sends the filtered scenarios to OpenAI with the script generation prompt.
-- Writes generated Playwright page objects and specs to the `generated` directory.
+Receives sanitized app details, exploration, optional requirements and the JSON schema. Runtime checks validate cases, provenance fields, known evidence IDs and selector mappings. Output review status is forced to draft. A model cannot grant approval. Evidence provenance checks do not prove the model's interpretation is correct.
 
-## Supporting Utilities
+## Agent 2: script generator
 
-- `shared/utils/app-config.ts` centralizes app configuration loading.
-- `shared/utils/openai-client.ts` configures the OpenAI Node SDK from environment variables.
-- `shared/utils/json-response.ts` normalizes JSON responses from model output.
+Reads canonical JSON and selects approved feasible cases, unless the caller explicitly enables demo drafts. Its prompt specifies the generated folder layout, dependency allowlist, stable selectors, web-first assertions and consistent page-object interfaces. It returns validated JSON, not direct filesystem writes.
+
+## Agent 3: validation and repair
+
+Deterministic implementation. Compilation, discovery and execution produce diagnostics. Only mechanical import-path correction is currently automated; unchanged test bodies preserve assertion semantics at the source level. Other repairs are planned, not silently delegated to a model.
+
+## Models and testing
+
+The model function is injected. Tests use committed payloads and mock responses; production constructs the OpenAI client lazily. Optional token usage is accumulated in the manifest.
 
