@@ -1,4 +1,5 @@
-export function parseJsonResponse<T>(rawText: string): T {
+import { z } from 'zod';
+export function parseJsonResponse<T>(rawText: string, schema: z.ZodType<T>): T {
   const trimmed = rawText.trim();
 
   if (!trimmed) {
@@ -8,6 +9,6 @@ export function parseJsonResponse<T>(rawText: string): T {
   const fencedMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
   const candidate = fencedMatch?.[1] ?? trimmed;
 
-  return JSON.parse(candidate) as T;
+  return schema.parse(JSON.parse(candidate));
 }
 

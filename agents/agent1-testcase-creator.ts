@@ -1,3 +1,4 @@
+import { testCasesSchema } from '../shared/schemas/test-case.schema';
 import fs from 'fs';
 import path from 'path';
 import dotenv from 'dotenv';
@@ -42,7 +43,7 @@ async function main() {
   });
 
   const rawText = response.output_text;
-  const testCases = parseJsonResponse<GeneratedTestCase[]>(rawText);
+  const testCases = parseJsonResponse(rawText, testCasesSchema);
 
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet('Test Cases');

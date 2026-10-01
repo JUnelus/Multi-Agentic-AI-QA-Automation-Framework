@@ -1,3 +1,4 @@
+import { generatedCodeSchema } from '../shared/schemas/generated-code.schema';
 import fs from 'fs';
 import path from 'path';
 import dotenv from 'dotenv';
@@ -95,7 +96,7 @@ ${JSON.stringify(testCases, null, 2)}
     input: prompt
   });
 
-  const generated = parseJsonResponse<GeneratedAutomationOutput>(response.output_text);
+  const generated = parseJsonResponse(response.output_text, generatedCodeSchema);
 
   fs.mkdirSync(appConfig.generatedPageObjectsPath, { recursive: true });
   fs.mkdirSync(appConfig.generatedSpecsPath, { recursive: true });

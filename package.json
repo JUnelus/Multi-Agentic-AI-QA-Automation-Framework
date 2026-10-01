@@ -10,7 +10,8 @@
     "agent:generate-scripts": "ts-node agents/agent2-script-generator.ts",
     "agent:run": "npm run agent:generate-testcases && npm run agent:generate-scripts",
     "test:saucedemo": "playwright test apps/saucedemo/tests",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:framework": "tsx --test tests/framework/*.spec.ts"
   },
   "repository": {
     "type": "git",
@@ -24,14 +25,17 @@
   },
   "homepage": "https://github.com/JUnelus/Multi-Agentic-AI-QA-Automation-Framework#readme",
   "dependencies": {
+    "@axe-core/playwright": "^4.13.0",
     "@playwright/test": "^1.60.0",
     "dotenv": "^17.4.2",
     "exceljs": "^4.4.0",
-    "openai": "^6.38.0"
+    "openai": "^6.38.0",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@types/node": "^25.9.0",
     "ts-node": "^10.9.2",
+    "tsx": "^4.23.15",
     "typescript": "^6.0.3"
   }
 }

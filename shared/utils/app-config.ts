@@ -1,30 +1,8 @@
-import fs from 'fs';
-import path from 'path';
-
-export interface AppCredentials {
-  [key: string]: {
-    username: string;
-    password: string;
-  };
+import fs from 'node:fs';
+import path from 'node:path';
+import { appConfigSchema, appIdSchema } from '../schemas/app-config.schema';
+export type { AppConfig } from '../schemas/app-config.schema';
+export function loadAppConfig(appName: string) {
+  appIdSchema.parse(appName);
+  return appConfigSchema.parse(JSON.parse(fs.readFileSync(path.join(process.cwd(), 'apps', appName, 'config.json'), 'utf8')));
 }
-
-export interface AppConfig {
-  appName: string;
-  baseUrl: string;
-  testCaseOutput: string;
-  generatedSpecsPath: string;
-  generatedPageObjectsPath: string;
-  testFocusAreas: string[];
-  credentials?: AppCredentials;
-}
-
-export function loadAppConfig(appName: string): AppConfig {
-  const configPath = path.join(process.cwd(), 'apps', appName, 'config.json');
-
-  if (!fs.existsSync(configPath)) {
-    throw new Error(`Config file not found for app: ${appName}`);
-  }
-
-  return JSON.parse(fs.readFileSync(configPath, 'utf-8')) as AppConfig;
-}
-

@@ -3,8 +3,13 @@
     "target": "ES2022",
     "module": "Node16",
     "moduleResolution": "Node16",
-    "lib": ["ES2022"],
-    "types": ["node", "@playwright/test"],
+    "lib": [
+      "ES2022"
+    ],
+    "types": [
+      "node",
+      "@playwright/test"
+    ],
     "resolveJsonModule": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
@@ -16,8 +21,7 @@
     "agents/**/*.ts",
     "apps/**/*.ts",
     "shared/**/*.ts",
-    "playwright.config.ts"
+    "playwright.config.ts",
+    "tests/framework/**/*.ts"
   ]
 }
-
-
