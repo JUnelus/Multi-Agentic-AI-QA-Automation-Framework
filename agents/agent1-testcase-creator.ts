@@ -1,87 +1,18 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import { AppConfig, loadAppConfig } from '../shared/utils/app-config';
 import { testCasesSchema } from '../shared/schemas/test-case.schema';
-import fs from 'fs';
-import path from 'path';
-import dotenv from 'dotenv';
-import ExcelJS from 'exceljs';
-import { loadAppConfig } from '../shared/utils/app-config';
 import { parseJsonResponse } from '../shared/utils/json-response';
-import { openai, OPENAI_MODEL } from '../shared/utils/openai-client';
-
-dotenv.config({ quiet: true });
-
-interface GeneratedTestCase {
-  testCaseId: string;
-  feature: string;
-  scenario: string;
-  testType: string;
-  priority: string;
-  preconditions: string;
-  steps: string[] | string;
-  expectedResult: string;
-  automationFeasible: string;
-  suggestedSelectorStrategy: string;
-  pageObject: string;
+import { generateWithOpenAI, Model } from '../shared/utils/openai-client';
+import { exportTestCases } from '../shared/utils/testcases';
+export async function createTestCases(config: AppConfig, model: Model = generateWithOpenAI, context: unknown = {}) {
+  const template = fs.readFileSync('agents/prompts/testcase-creator.prompt.md', 'utf8');
+  const response = await model(template + '\nInput:\n' + JSON.stringify({ app: { appName: config.appName, baseUrl: config.baseUrl, testFocusAreas: config.testFocusAreas }, context }));
+  const cases = parseJsonResponse(response.text, testCasesSchema).map(c => ({ ...c, reviewStatus: 'draft' as const }));
+  return { cases, usage: response.usage };
 }
-
-async function main() {
-  const targetApp = process.env.TARGET_APP || 'saucedemo';
-  const appConfig = loadAppConfig(targetApp);
-
-  const promptTemplate = fs.readFileSync(
-    path.join(process.cwd(), 'agents', 'prompts', 'testcase-creator.prompt.md'),
-    'utf-8'
-  );
-
-  const prompt = promptTemplate
-    .replace('{{APP_NAME}}', appConfig.appName)
-    .replace('{{BASE_URL}}', appConfig.baseUrl)
-    .replace('{{FOCUS_AREAS}}', appConfig.testFocusAreas.join(', '));
-
-  const response = await openai.responses.create({
-    model: OPENAI_MODEL,
-    input: prompt
-  });
-
-  const rawText = response.output_text;
-  const testCases = parseJsonResponse(rawText, testCasesSchema);
-
-  const workbook = new ExcelJS.Workbook();
-  const worksheet = workbook.addWorksheet('Test Cases');
-
-  worksheet.columns = [
-    { header: 'Test Case ID', key: 'testCaseId', width: 20 },
-    { header: 'Feature', key: 'feature', width: 20 },
-    { header: 'Scenario', key: 'scenario', width: 40 },
-    { header: 'Test Type', key: 'testType', width: 20 },
-    { header: 'Priority', key: 'priority', width: 15 },
-    { header: 'Preconditions', key: 'preconditions', width: 40 },
-    { header: 'Steps', key: 'steps', width: 60 },
-    { header: 'Expected Result', key: 'expectedResult', width: 50 },
-    { header: 'Automation Feasible', key: 'automationFeasible', width: 25 },
-    {
-      header: 'Suggested Selector Strategy',
-      key: 'suggestedSelectorStrategy',
-      width: 35
-    },
-    { header: 'Page Object', key: 'pageObject', width: 25 }
-  ];
-
-  testCases.forEach((testCase) => {
-    worksheet.addRow({
-      ...testCase,
-      steps: Array.isArray(testCase.steps) ? testCase.steps.join('\n') : testCase.steps
-    });
-  });
-
-  fs.mkdirSync(path.dirname(appConfig.testCaseOutput), { recursive: true });
-  await workbook.xlsx.writeFile(appConfig.testCaseOutput);
-
-  console.log(`Test cases generated: ${appConfig.testCaseOutput}`);
+if (require.main === module) {
+  const app = process.env.TARGET_APP || 'saucedemo';
+  createTestCases(loadAppConfig(app)).then(result => exportTestCases(result.cases, path.join('generated', 'runs', app + '-' + Date.now()))).catch(() => { console.error('Agent 1 failed. Check configuration and response schema.'); process.exitCode = 1; });
 }
-
-main().catch((error) => {
-  console.error('Agent 1 failed:', error);
-  process.exit(1);
-});
-
 
