@@ -68,7 +68,11 @@ export function auditCode(
       'configure',
       'use',
       'slow',
-      'setTimeout'
+      'setTimeout',
+      // Suite hooks receive separate Playwright timeout slots outside the
+      // per-case budget and cannot use worker-scoped browser capabilities.
+      'beforeAll',
+      'afterAll'
     ]);
     function visit(node: ts.Node) {
       if (
@@ -83,7 +87,10 @@ export function auditCode(
           node.propertyName.getText(source).replace(/['"]/g, '')
         )
       )
-        errors.push('Unsupported destructured capability');
+        errors.push(
+          'Unsupported destructured capability: ' +
+            node.propertyName.getText(source).replace(/['"]/g, '')
+        );
       if (ts.isElementAccessExpression(node)) {
         const key = node.argumentExpression;
         if (
@@ -158,7 +165,9 @@ export function auditCode(
           'navigator',
           'browser',
           'Reflect',
-          '__proto__'
+          '__proto__',
+          'beforeAll',
+          'afterAll'
         ].includes(node.text)
       )
         errors.push('Unsupported runtime capability: ' + node.text);

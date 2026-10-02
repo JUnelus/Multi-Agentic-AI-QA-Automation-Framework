@@ -9,6 +9,8 @@ export function classifyFailure(
     )
   )
     return 'ENVIRONMENT_ERROR';
+  if (/Generated tests cannot use test\./.test(diagnostic))
+    return 'GENERATOR_ERROR';
   if (stage === 'schema') return 'GENERATOR_ERROR';
   if (stage === 'execution') {
     if (

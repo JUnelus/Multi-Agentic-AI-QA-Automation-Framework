@@ -7,6 +7,7 @@ import { readTestCases } from '../../shared/utils/testcases';
 import { loadAppConfig } from '../../shared/utils/app-config';
 import { inspectPlaywrightReport } from '../../shared/validation/playwright-report';
 import { executionBudget } from '../../shared/validation/execution-budget';
+import { test as guardedTest } from '../../shared/validation/generated-test';
 const original = readTestCases('tests/fixtures/saucedemo-test-cases.json')[0];
 const cases = ['CASE-1', 'CASE-1-NEG'].map((testCaseId) => ({
   ...original,
@@ -156,12 +157,112 @@ test('report binding treats CASE-1 and CASE-1-NEG independently', () => {
   );
 });
 test('execution budget scales with case count and rejects unbounded workloads', () => {
-  assert.equal(executionBudget(1).globalTimeoutMs, 60000);
-  assert.equal(executionBudget(4).globalTimeoutMs, 150000);
-  assert.equal(executionBudget(4).processTimeoutMs, 180000);
-  for (const count of [0, -1, 1.5, 201, 30, Infinity])
+  assert.equal(executionBudget(1).globalTimeoutMs, 90000);
+  assert.equal(executionBudget(4).globalTimeoutMs, 270000);
+  assert.equal(executionBudget(4).processTimeoutMs, 300000);
+  for (const count of [0, -1, 1.5, 201, 15, 30, Infinity])
     assert.throws(() => executionBudget(count));
   assert.throws(() => executionBudget(1, 500));
+});
+
+test('execution budget reserves the Playwright after-hooks slot for every case', () => {
+  // Playwright 1.60 runs afterEach hooks and test-scoped fixture teardown in a
+  // separate slot whose timeout equals the test timeout.
+  const one = executionBudget(1);
+  assert.equal(one.perTestMs, 30000);
+  assert.equal(one.afterHooksMs, 30000);
+  assert.equal(one.globalTimeoutMs, 30000 + 1 * (30000 + 30000));
+  assert.equal(executionBudget(3, 10000).globalTimeoutMs, 90000);
+  assert.doesNotThrow(() => executionBudget(14));
+  assert.throws(() => executionBudget(15), /split the approved/);
+});
+
+test('suite hooks are rejected in every syntactic form so per-case budgets stay exact', () => {
+  for (const body of [
+    'test.beforeAll(async () => {});',
+    'test.afterAll(async () => {});',
+    'test["beforeAll"](async () => {});',
+    'test[`afterAll`](async () => {});',
+    'const { beforeAll: setup } = test; setup(async () => {});',
+    'const { afterAll } = test; afterAll(async () => {});',
+    'const hook = test.afterAll; hook(async () => {});',
+    'for (let i = 0; i < 3; i++) test.beforeAll(async () => {});',
+    'test.describe("group", () => { test.beforeAll(async () => {}); });'
+  ])
+    assert.ok(
+      auditCode(code(body + declaration('CASE-1', assertion)), [cases[0]])
+        .length > 0,
+      body
+    );
+  assert.deepEqual(
+    auditCode(
+      code(
+        'test.beforeEach(async ({ page }) => { await page.goto("/"); });\n' +
+          'test.afterEach(async ({ page }) => { await expect(page).toHaveURL(/./); });\n' +
+          declaration('CASE-1', assertion)
+      ),
+      [cases[0]]
+    ),
+    []
+  );
+});
+
+test('guarded test object seals hooks, factories and timeout controls reached by any route', () => {
+  const sealed = [
+    'beforeAll',
+    'afterAll',
+    'extend',
+    'use',
+    'slow',
+    'setTimeout',
+    'only',
+    'skip',
+    'fixme',
+    'fail'
+  ];
+  for (const name of sealed) {
+    // Recover the member the way a concatenated-key enumeration would.
+    const recovered = Object.entries(guardedTest).filter(
+      ([key]) => key === name.slice(0, 2) + name.slice(2)
+    )[0][1];
+    assert.throws(
+      () => recovered(async () => {}),
+      new RegExp('cannot use test\\.' + name),
+      name
+    );
+    const descriptor = Object.getOwnPropertyDescriptor(guardedTest, name);
+    assert.equal(descriptor?.writable, false, name);
+    assert.equal(descriptor?.configurable, false, name);
+  }
+  for (const name of ['configure', 'only', 'skip', 'fixme'])
+    assert.throws(
+      () =>
+        Object.entries(guardedTest.describe).filter(([k]) => k === name)[0][1](
+          {}
+        ),
+      new RegExp('cannot use test\\.describe\\.' + name)
+    );
+  // Nested controls are sealed as well: step.skip, describe.parallel/serial.only.
+  const recoveredStepSkip = Object.entries(guardedTest.step).filter(
+    ([k]) => k === 'sk' + 'ip'
+  )[0][1];
+  assert.throws(
+    () => recoveredStepSkip('step', async () => {}),
+    /cannot use test\.step\.skip/
+  );
+  for (const mode of ['parallel', 'serial'] as const)
+    assert.throws(
+      () => guardedTest.describe[mode].only('group', () => {}),
+      new RegExp('cannot use test\\.describe\\.' + mode + '\\.only')
+    );
+  assert.equal(typeof guardedTest.describe.parallel, 'function');
+  assert.equal(typeof guardedTest.describe.serial, 'function');
+  assert.throws(() => guardedTest.extend({}), /cannot use test\.extend/);
+  assert.equal(typeof guardedTest.beforeEach, 'function');
+  assert.equal(typeof guardedTest.afterEach, 'function');
+  assert.equal(typeof guardedTest.describe, 'function');
+  assert.equal(typeof guardedTest.step, 'function');
+  assert.equal(typeof guardedTest.info, 'function');
 });
 
 test('indirect browser factories, aliases, computed capabilities and timeout overrides are rejected', () => {
@@ -188,7 +289,7 @@ test('manual workflow reserves time for bounded repairs, model retries and setup
     'utf8'
   );
   const minutes = Number(/timeout-minutes:\s*(\d+)/.exec(workflow)?.[1]);
-  const maximumValidation = executionBudget(29).processTimeoutMs;
+  const maximumValidation = executionBudget(14).processTimeoutMs;
   const fourAttempts = maximumValidation * 4;
   const twoModelsWithRetries = 2 * 3 * 120000;
   const setupAndUpload = 20 * 60000;

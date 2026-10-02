@@ -1,6 +1,7 @@
 import { writeAtomicJson } from '../utils/atomic-json';
 import fs from 'node:fs';
 import path from 'node:path';
+import { randomUUID } from 'node:crypto';
 import { RunManifest } from '../schemas/run-manifest.schema';
 import { validationReportSchema } from '../schemas/validation-report.schema';
 import { appIdSchema } from '../schemas/app-config.schema';
@@ -39,19 +40,42 @@ export function promote(
   const appDirectory = path.resolve(root, manifest.application);
   assertNoSymlinks(appDirectory);
   const version = path.join(appDirectory, manifest.runId);
-  stageCode(readCode(directory), version);
-  if (artifactHash(version) !== report.artifactHash)
-    throw new Error('Promoted copy hash mismatch');
-  manifest.artifacts.approved = version;
-  writeAtomicJson(path.join(version, 'manifest.json'), manifest);
-  fs.copyFileSync(
-    path.join(runDirectory, 'test-cases.json'),
-    path.join(version, 'test-cases.json')
+  if (fs.existsSync(version))
+    throw new Error('Approved version already exists: ' + manifest.runId);
+  fs.mkdirSync(appDirectory, { recursive: true });
+  // Build the complete version in a unique sibling directory, then publish it
+  // with one rename so readers never observe a partially written version and a
+  // failed promotion can be retried with the same run ID.
+  const staging = path.join(
+    appDirectory,
+    '.' + manifest.runId + '.' + randomUUID() + '.tmp'
   );
-  writeAtomicJson(path.join(appDirectory, 'current.json'), {
-    runId: manifest.runId,
-    directory: manifest.runId,
-    artifactHash: report.artifactHash
-  });
+  const previousApproved = manifest.artifacts.approved;
+  let published = false;
+  try {
+    stageCode(readCode(directory), staging);
+    if (artifactHash(staging) !== report.artifactHash)
+      throw new Error('Promoted copy hash mismatch');
+    manifest.artifacts.approved = version;
+    writeAtomicJson(path.join(staging, 'manifest.json'), manifest);
+    fs.copyFileSync(
+      path.join(runDirectory, 'test-cases.json'),
+      path.join(staging, 'test-cases.json')
+    );
+    fs.renameSync(staging, version);
+    published = true;
+    writeAtomicJson(path.join(appDirectory, 'current.json'), {
+      runId: manifest.runId,
+      directory: manifest.runId,
+      artifactHash: report.artifactHash
+    });
+  } catch (error) {
+    if (previousApproved === undefined) delete manifest.artifacts.approved;
+    else manifest.artifacts.approved = previousApproved;
+    fs.rmSync(staging, { recursive: true, force: true });
+    // An unpublished pointer must not leave an orphaned version behind.
+    if (published) fs.rmSync(version, { recursive: true, force: true });
+    throw error;
+  }
   return version;
 }

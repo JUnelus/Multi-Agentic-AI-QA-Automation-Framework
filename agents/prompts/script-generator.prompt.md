@@ -9,7 +9,7 @@ Use Page Object Model, baseURL-relative navigation, stable evidence-backed selec
 Playwright web-first assertions. Do not invent selectors when evidence is available.
 Only import installed dependencies supplied in the input, the required framework test fixture below, and relative generated page objects.
 Never import Node system modules, read environment secrets, use eval, perform filesystem operations, or use unguarded networking.
-No hard waits, skipped/focused tests, retries that mask failures, or swallowed errors.
+No hard waits, skipped/focused tests, retries that mask failures, or swallowed errors. Never register test.beforeAll or test.afterAll hooks; use beforeEach/afterEach or the test body.
 Preserve every approved expected result. Never remove or weaken an assertion to make a test pass.
 No ambiguous assertions accepting either page A or B unless the requirement explicitly permits both.
 Include each testCaseId literally in its test title and generate at least one meaningful assertion per case.

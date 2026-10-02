@@ -110,3 +110,99 @@ test('syntactically present but unexecuted assertions cannot certify a case', as
     fs.rmSync(directory, { recursive: true, force: true });
   }
 });
+
+test('suite hooks recovered through object enumeration fail discovery with a generator error', async () => {
+  const directory = fs.mkdtempSync(
+    path.join(process.cwd(), 'generated', 'contract-test-')
+  );
+  try {
+    const code = readCode('tests/fixtures/generated/saucedemo');
+    code.specFiles[0].code = `import {test,expect} from 'multi-agentic-ai-qa-automation-framework/generated-test';
+  const setup = Object.entries(test).filter(([k]) => k === 'before' + 'All')[0][1];
+  setup(async () => { await new Promise(() => {}); });
+  test('[TC_LOGIN_001] enumeration bypass',async({page})=>{await page.goto('/');await expect(page).toHaveURL(/./);});`;
+    const staging = path.join(directory, 'staging');
+    stageCode(code, staging);
+    const report = await validateCode(
+      'enumerated-hook',
+      'saucedemo',
+      staging,
+      path.join(directory, 'reports'),
+      readTestCases('tests/fixtures/saucedemo-test-cases.json')
+    );
+    assert.equal(report.schema.status, 'passed');
+    assert.equal(report.typecheck.status, 'passed');
+    assert.equal(report.discovery.status, 'failed');
+    assert.match(report.discovery.diagnostics, /cannot use test\.beforeAll/);
+    assert.equal(report.execution.status, 'not-run');
+    assert.equal(report.finalResult, 'failed');
+    assert.equal(report.category, 'GENERATOR_ERROR');
+  } finally {
+    fs.rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test('suite hooks on a test object derived through recovered extend fail discovery', async () => {
+  const directory = fs.mkdtempSync(
+    path.join(process.cwd(), 'generated', 'contract-test-')
+  );
+  try {
+    const code = readCode('tests/fixtures/generated/saucedemo');
+    code.specFiles[0].code = `import {test,expect} from 'multi-agentic-ai-qa-automation-framework/generated-test';
+  const derive = Object.entries(test).filter(([k]) => k === 'ex' + 'tend')[0][1];
+  const derived: typeof test = derive({});
+  Object.entries(derived).filter(([k]) => k === 'before' + 'All')[0][1](async () => { await new Promise(() => {}); });
+  test('[TC_LOGIN_001] derived hook bypass',async({page})=>{await page.goto('/');await expect(page).toHaveURL(/./);});`;
+    const staging = path.join(directory, 'staging');
+    stageCode(code, staging);
+    const report = await validateCode(
+      'derived-hook',
+      'saucedemo',
+      staging,
+      path.join(directory, 'reports'),
+      readTestCases('tests/fixtures/saucedemo-test-cases.json')
+    );
+    assert.equal(report.schema.status, 'passed');
+    assert.equal(report.typecheck.status, 'passed');
+    assert.equal(report.discovery.status, 'failed');
+    assert.match(report.discovery.diagnostics, /cannot use test\.extend/);
+    assert.equal(report.execution.status, 'not-run');
+    assert.equal(report.finalResult, 'failed');
+    assert.equal(report.category, 'GENERATOR_ERROR');
+  } finally {
+    fs.rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test('a recovered test.step.skip cannot hide the substantive step of a case', async () => {
+  const directory = fs.mkdtempSync(
+    path.join(process.cwd(), 'generated', 'contract-test-')
+  );
+  try {
+    const code = readCode('tests/fixtures/generated/saucedemo');
+    code.specFiles[0].code = `import {test,expect} from 'multi-agentic-ai-qa-automation-framework/generated-test';
+  test('[TC_LOGIN_001] skipped substantive step',async({page})=>{
+    const skipStep = Object.entries(test.step).filter(([k]) => k === 'sk' + 'ip')[0][1];
+    await skipStep('substantive actions', async () => { await page.goto('/'); await expect(page).toHaveURL(/inventory/); });
+    await expect(page).toHaveURL(/./);
+  });`;
+    const staging = path.join(directory, 'staging');
+    stageCode(code, staging);
+    const report = await validateCode(
+      'step-skip',
+      'saucedemo',
+      staging,
+      path.join(directory, 'reports'),
+      readTestCases('tests/fixtures/saucedemo-test-cases.json')
+    );
+    assert.equal(report.schema.status, 'passed');
+    assert.equal(report.typecheck.status, 'passed');
+    assert.equal(report.discovery.status, 'passed');
+    assert.equal(report.execution.status, 'failed');
+    assert.match(report.execution.diagnostics, /cannot use test\.step\.skip/);
+    assert.equal(report.finalResult, 'failed');
+    assert.equal(report.category, 'GENERATOR_ERROR');
+  } finally {
+    fs.rmSync(directory, { recursive: true, force: true });
+  }
+});

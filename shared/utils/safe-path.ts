@@ -37,6 +37,41 @@ export function assertNoSymlinks(target: string): void {
     current = parent;
   }
 }
+// Operator-supplied inputs (cases, exploration, requirements, code) are read only
+// from regular files or directories inside the repository checkout, so a
+// workflow input such as /proc/self/environ can never be read or persisted
+// into an uploaded run artifact.
+export function resolveRepositoryInput(
+  input: string,
+  kind: 'file' | 'directory',
+  root = process.cwd()
+): string {
+  if (typeof input !== 'string' || !input.trim())
+    throw new Error('Input path cannot be empty');
+  // Reject absolute, drive and UNC forms and any ".." component before
+  // normalization; a traversal that happens to land inside the checkout is
+  // still outside the documented repository-relative contract.
+  if (path.isAbsolute(input) || /^([A-Za-z]:|[\\/]{2})/.test(input))
+    throw new Error(
+      'Input must be a repository-relative path inside the checkout: ' + input
+    );
+  if (input.split(/[\\/]+/).some((segment) => segment === '..'))
+    throw new Error(
+      'Input must be a repository-relative path without ".." components: ' +
+        input
+    );
+  const base = path.resolve(root);
+  const target = path.resolve(base, input);
+  if (target === base || !target.startsWith(base + path.sep))
+    throw new Error(
+      'Input must be a repository-relative path inside the checkout: ' + input
+    );
+  assertNoSymlinks(target);
+  const stat = fs.lstatSync(target);
+  if (kind === 'file' ? !stat.isFile() : !stat.isDirectory())
+    throw new Error('Input must be a regular ' + kind + ': ' + input);
+  return target;
+}
 // Each batch gets a fresh directory. Existing artifacts cannot be overwritten.
 export function stageCode(output: GeneratedCode, directory: string): void {
   const code = generatedCodeSchema.parse(output);

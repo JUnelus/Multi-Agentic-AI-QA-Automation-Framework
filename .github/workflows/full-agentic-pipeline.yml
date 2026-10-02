@@ -43,6 +43,26 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx playwright install --with-deps chromium
+      - name: Confine repository-relative inputs
+        shell: bash
+        run: |
+          for input in "$QA_CASES_INPUT" "$QA_EXPLORATION_INPUT" "$QA_REQUIREMENTS_INPUT"; do
+            if [[ -z "$input" ]]; then continue; fi
+            if [[ "$input" == /* || "$input" == *..* || "$input" == *\\* || "$input" == *:* ]]; then
+              echo "Input must be a repository-relative path without traversal: $input" >&2
+              exit 1
+            fi
+            if [[ -L "$input" || ! -f "$input" ]]; then
+              echo "Input must be an existing regular file inside the checkout: $input" >&2
+              exit 1
+            fi
+            # Every path component must be real: a symlinked parent directory
+            # changes the canonical path but not the lexical one.
+            if [[ "$(realpath -e -- "$input")" != "$(realpath -s -m -- "$input")" ]]; then
+              echo "Input path must not traverse a symlink: $input" >&2
+              exit 1
+            fi
+          done
       - name: Fixture pipeline
         if: inputs.mode == 'no-ai'
         run: npx tsx agents/orchestrator.ts --app "$QA_APP_INPUT" --no-ai

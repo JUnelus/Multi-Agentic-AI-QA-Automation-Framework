@@ -1,6 +1,6 @@
 # PR 1 review resolution
 
-Review fixes were implemented and tested on Windows on 2026-09-30 (America/New_York). No paid OpenAI calls were made. PR remains unmerged.
+Review fixes were implemented and tested on Windows on 2026-09-30 (America/New_York). No paid OpenAI calls were made. The repository owner merged PR 1 on 2026-10-01; the final Codex re-review findings below were addressed afterwards in a follow-up pull request.
 
 ## Findings addressed
 
@@ -31,6 +31,20 @@ The completed re-review of d259e1c produced seven further findings, now fixed:
 - Require an exploration fingerprint whenever a supplied case claims observations or selector evidence; missing fingerprints cannot bypass validation.
 - Preserve infrastructure error categories in pre-validation reports. A real missing-file pipeline regression verifies a persisted ENVIRONMENT_ERROR.
 - Stamp requirement content fingerprints in Agent 1 and reject missing or substituted requirements when resuming reviewed cases.
+
+## Final Codex re-review findings (addressed after merge)
+
+The re-review of 378f68b produced three further findings, now fixed:
+
+- P1 input confinement: `--cases`, `--exploration`, `--requirements` and `--code-dir` are resolved beneath the repository checkout and must be regular files/directories without symlinks before anything is read or persisted; requirements are capped at 1 MiB. The manual workflow additionally rejects absolute, traversal and symlinked inputs in Bash. Tests: safe-path.spec.ts (confinement, special files, junctions) and orchestrator.spec.ts (outside and `/proc/self/environ` inputs leave no requirements.txt or manifest pointer).
+- P2 suite-hook budget: `beforeAll`/`afterAll` registrations are rejected by the static audit in every syntactic form, so no suite hook can claim a separate Playwright timeout slot outside the per-case budget. Tests: review-contract.spec.ts (property, computed, destructured, aliased, looped and nested registrations rejected; beforeEach/afterEach accepted).
+- P2 staged promotion: the approved version is assembled in a hidden sibling directory and published with one rename; failures remove staging or an unpublished version, restore the manifest pointer and allow a retry with the same run ID. Tests: promotion.spec.ts (mid-stage failure, pointer failure, retry, consistent manifests, no temporary directories).
+
+Codex's review of the follow-up pull request added two P2 findings, also fixed: computed or looped suite-hook registrations escaped the hook count (resolved by rejecting suite hooks outright, above), and Playwright 1.60 runs `afterEach` hooks plus fixture teardown in a separate "After Hooks" slot with its own test-length timeout. The execution budget now reserves that slot for every case (60 seconds per case, up to 14 cases per 15-minute batch) and records `afterHooksMs` in gate diagnostics; the workflow headroom regression uses the new maximum batch. A third finding showed that enumerating the test object with a concatenated key recovers `beforeAll` past any static name check, so the guarded `test` export now replaces `beforeAll`/`afterAll` with sealed throwing stubs; a real discovery run (execution-feedback.spec.ts) proves the enumeration bypass fails as a generator error. A Copilot review then noted that `..` components which normalize back inside the checkout were accepted; `resolveRepositoryInput` now rejects absolute, drive, UNC and `..` forms before normalization so the code matches the documented repository-relative contract and the workflow guard. A later Copilot pass noted the workflow guard only detected a symlink at the final component; it now also requires the canonical path to equal the lexical path, rejecting symlinked parent directories as the orchestrator already does. Codex then showed that a recovered `extend` yields a derived test object with live hooks; the guarded export now seals `extend` together with every hook, timeout and skip control (and `describe.configure/only/skip/fixme`), and a real discovery run proves the derived-object bypass fails as a generator error. A final Codex pass found `test.step.skip` still live; sealing is now a generic walk over the test object and its nested containers, and a real execution run proves that skipping a case's substantive step through a recovered `step.skip` fails the execution gate as a generator error.
+
+The follow-up CI run also exposed an intermittent curated failure (TC_CART_001: cart assertion raced the client-side cart route and matched six inventory items). The inventory page object now waits for the cart URL and visible cart list after clicking the cart link; no expected result changed. Standalone agent entry points (`agent:explore`, `agent:generate-testcases`, `agent:generate-scripts`, `agent:validate-repair`) were reviewed for the same input issue: they are local developer commands that the workflows never invoke and they schema-parse JSON rather than copying raw file contents, so they were left unchanged.
+
+Follow-up verification on Windows (2026-10-01): typecheck passed; 55 framework tests passed; format check passed; generated typecheck passed; 106 generated tests discovered; curated SauceDemo passed 20/20 with `--repeat-each=4`; both no-AI pipelines promoted new versions with no temporary directories left behind; a real saved exploration was imported through `--cases`/`--exploration` with its screenshot digest verified and the run promoted; the full generated suite remained at 101 passed and the same 5 preserved legacy accessibility failures listed below.
 
 ## Commands and results
 
