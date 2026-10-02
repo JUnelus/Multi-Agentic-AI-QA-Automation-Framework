@@ -242,6 +242,21 @@ test('guarded test object seals hooks, factories and timeout controls reached by
         ),
       new RegExp('cannot use test\\.describe\\.' + name)
     );
+  // Nested controls are sealed as well: step.skip, describe.parallel/serial.only.
+  const recoveredStepSkip = Object.entries(guardedTest.step).filter(
+    ([k]) => k === 'sk' + 'ip'
+  )[0][1];
+  assert.throws(
+    () => recoveredStepSkip('step', async () => {}),
+    /cannot use test\.step\.skip/
+  );
+  for (const mode of ['parallel', 'serial'] as const)
+    assert.throws(
+      () => guardedTest.describe[mode].only('group', () => {}),
+      new RegExp('cannot use test\\.describe\\.' + mode + '\\.only')
+    );
+  assert.equal(typeof guardedTest.describe.parallel, 'function');
+  assert.equal(typeof guardedTest.describe.serial, 'function');
   assert.throws(() => guardedTest.extend({}), /cannot use test\.extend/);
   assert.equal(typeof guardedTest.beforeEach, 'function');
   assert.equal(typeof guardedTest.afterEach, 'function');
