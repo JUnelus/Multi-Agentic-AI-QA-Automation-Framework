@@ -207,26 +207,47 @@ test('suite hooks are rejected in every syntactic form so per-case budgets stay 
   );
 });
 
-test('guarded test object refuses suite hooks reached by any route at runtime', () => {
-  assert.throws(
-    () => guardedTest.beforeAll(async () => {}),
-    /cannot register test\.beforeAll/
-  );
-  assert.throws(
-    () => guardedTest.afterAll(async () => {}),
-    /cannot register test\.afterAll/
-  );
-  const recovered = Object.entries(guardedTest).filter(
-    ([key]) => key === 'before' + 'All'
-  )[0][1];
-  assert.throws(() => recovered(async () => {}), /cannot register/);
-  for (const hook of ['beforeAll', 'afterAll']) {
-    const descriptor = Object.getOwnPropertyDescriptor(guardedTest, hook);
-    assert.equal(descriptor?.writable, false);
-    assert.equal(descriptor?.configurable, false);
+test('guarded test object seals hooks, factories and timeout controls reached by any route', () => {
+  const sealed = [
+    'beforeAll',
+    'afterAll',
+    'extend',
+    'use',
+    'slow',
+    'setTimeout',
+    'only',
+    'skip',
+    'fixme',
+    'fail'
+  ];
+  for (const name of sealed) {
+    // Recover the member the way a concatenated-key enumeration would.
+    const recovered = Object.entries(guardedTest).filter(
+      ([key]) => key === name.slice(0, 2) + name.slice(2)
+    )[0][1];
+    assert.throws(
+      () => recovered(async () => {}),
+      new RegExp('cannot use test\\.' + name),
+      name
+    );
+    const descriptor = Object.getOwnPropertyDescriptor(guardedTest, name);
+    assert.equal(descriptor?.writable, false, name);
+    assert.equal(descriptor?.configurable, false, name);
   }
+  for (const name of ['configure', 'only', 'skip', 'fixme'])
+    assert.throws(
+      () =>
+        Object.entries(guardedTest.describe).filter(([k]) => k === name)[0][1](
+          {}
+        ),
+      new RegExp('cannot use test\\.describe\\.' + name)
+    );
+  assert.throws(() => guardedTest.extend({}), /cannot use test\.extend/);
   assert.equal(typeof guardedTest.beforeEach, 'function');
+  assert.equal(typeof guardedTest.afterEach, 'function');
   assert.equal(typeof guardedTest.describe, 'function');
+  assert.equal(typeof guardedTest.step, 'function');
+  assert.equal(typeof guardedTest.info, 'function');
 });
 
 test('indirect browser factories, aliases, computed capabilities and timeout overrides are rejected', () => {
